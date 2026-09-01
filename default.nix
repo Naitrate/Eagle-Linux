@@ -144,31 +144,31 @@ let
         "$extraction_dir" \
         ./eagle-unpacked-layout.json
 
-      if [ ! -d "$extraction_dir/extracted_app" ]; then
-        echo "ERROR: Eagle extraction did not produce extracted_app/"
+      if [ ! -d "$extraction_dir/app" ]; then
+        echo "ERROR: Eagle extraction did not produce app/"
         exit 1
       fi
 
       echo "Copying extracted application..."
       cp -r \
-        "$extraction_dir/extracted_app" \
+        "$extraction_dir/app" \
         "$out/share/eagle/"
 
       if [ -d "$extraction_dir/app.asar.unpacked" ]; then
         echo "Merging app.asar.unpacked..."
         cp -r \
           "$extraction_dir/app.asar.unpacked/." \
-          "$out/share/eagle/extracted_app/"
+          "$out/share/eagle/app/"
       fi
 
-      if [ -d "./extracted_app_patches" ]; then
-        echo "Applying extracted_app_patches..."
+      if [ -d "./app_patches" ]; then
+        echo "Applying app_patches..."
         cp -r \
-          ./extracted_app_patches/. \
-          "$out/share/eagle/extracted_app/"
+          ./app_patches/. \
+          "$out/share/eagle/app/"
       fi
 
-      eagle_assets="$out/share/eagle/extracted_app/assets"
+      eagle_assets="$out/share/eagle/app/assets"
 
       if [ -f "$eagle_assets/icon.png" ]; then
         echo "Installing Linux-compatible Eagle tray icon..."
@@ -211,19 +211,19 @@ let
 EOF
 
       # Create dummy executable NiuniuCapture.exe so physical file checks pass
-      cat << 'EOF' > "$out/share/eagle/extracted_app/NiuniuCapture.exe"
+      cat << 'EOF' > "$out/share/eagle/app/NiuniuCapture.exe"
 #!/bin/sh
 exit 0
 EOF
-      chmod +x "$out/share/eagle/extracted_app/NiuniuCapture.exe"
+      chmod +x "$out/share/eagle/app/NiuniuCapture.exe"
 
-      if [ -d "$out/share/eagle/extracted_app/app" ]; then
-        cp "$out/share/eagle/extracted_app/NiuniuCapture.exe" "$out/share/eagle/extracted_app/app/NiuniuCapture.exe"
+      if [ -d "$out/share/eagle/app/app" ]; then
+        cp "$out/share/eagle/app/NiuniuCapture.exe" "$out/share/eagle/app/app/NiuniuCapture.exe"
       fi
 
       # Symlink Linux illustrations to Win32 assets for Welcome screen
       for theme in dark light; do
-        dir="$out/share/eagle/extracted_app/app/assets/images/$theme/illustrations"
+        dir="$out/share/eagle/app/app/assets/images/$theme/illustrations"
         if [ -d "$dir" ]; then
           for win_img in "$dir"/*-win32.png; do
             if [ -f "$win_img" ]; then
@@ -236,9 +236,9 @@ EOF
 
       # Install application icon into hicolor icon theme and pixmaps for desktop menu integration
       mkdir -p "$out/share/icons/hicolor/512x512/apps" "$out/share/pixmaps"
-      if [ -f "$out/share/eagle/extracted_app/assets/icon.png" ]; then
-        cp "$out/share/eagle/extracted_app/assets/icon.png" "$out/share/icons/hicolor/512x512/apps/eagle.png"
-        cp "$out/share/eagle/extracted_app/assets/icon.png" "$out/share/pixmaps/eagle.png"
+      if [ -f "$out/share/eagle/app/assets/icon.png" ]; then
+        cp "$out/share/eagle/app/assets/icon.png" "$out/share/icons/hicolor/512x512/apps/eagle.png"
+        cp "$out/share/eagle/app/assets/icon.png" "$out/share/pixmaps/eagle.png"
       fi
 
       # Install udev rule allowing unprivileged access to DMI product_uuid
@@ -249,9 +249,9 @@ SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
 EOF
 
       makeWrapper ${pkgs.nodejs}/bin/npx "$out/bin/eagle" \
-        --add-flags "--yes electron@22.3.7 -r $out/share/eagle/stubs.js $out/share/eagle/extracted_app --no-sandbox" \
+        --add-flags "--yes electron@22.3.7 -r $out/share/eagle/stubs.js $out/share/eagle/app --no-sandbox" \
         --set GTK_USE_PORTAL "1" \
-        --prefix NODE_PATH : "$out/share/eagle/extracted_app/node_modules" \
+        --prefix NODE_PATH : "$out/share/eagle/app/node_modules" \
         --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
         --prefix PATH : "${pkgs.lib.makeBinPath (
           [

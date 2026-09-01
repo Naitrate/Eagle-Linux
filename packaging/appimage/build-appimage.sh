@@ -16,19 +16,19 @@ if [ -d "${APPDIR}" ]; then
 fi
 mkdir -p "${APPDIR}/usr/bin" "${APPDIR}/usr/share/eagle" "${APPDIR}/usr/share/applications" "${APPDIR}/usr/share/icons/hicolor/512x512/apps" "${OUTPUT_DIR}"
 
-# Place extracted_app and stubs.js both in root and usr/share/eagle for universal compatibility
-cp -r "${REPO_DIR}/extracted_app" "${APPDIR}/extracted_app"
+# Place app and stubs.js both in root and usr/share/eagle for universal compatibility
+cp -r "${REPO_DIR}/app" "${APPDIR}/app"
 cp "${REPO_DIR}/stubs.js" "${APPDIR}/stubs.js"
 
-cp -r "${REPO_DIR}/extracted_app" "${APPDIR}/usr/share/eagle/"
+cp -r "${REPO_DIR}/app" "${APPDIR}/usr/share/eagle/"
 cp "${REPO_DIR}/stubs.js" "${APPDIR}/usr/share/eagle/"
 
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 
 # Desktop file and icon for AppImage root
-cp "${REPO_DIR}/extracted_app/assets/icon.png" "${APPDIR}/eagle.png"
-cp "${REPO_DIR}/extracted_app/assets/icon.png" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/eagle.png"
+cp "${REPO_DIR}/app/assets/icon.png" "${APPDIR}/eagle.png"
+cp "${REPO_DIR}/app/assets/icon.png" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/eagle.png"
 
 cat << 'EOF' > "${APPDIR}/eagle.desktop"
 [Desktop Entry]

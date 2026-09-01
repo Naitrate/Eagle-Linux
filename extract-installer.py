@@ -13,11 +13,11 @@ The extractor expects a layout manifest:
 
 The manifest contains the physical decompressed-payload offsets of the
 ASAR-unpacked files. This makes the Nix build completely independent of
-the developer's local extracted_app/ reference tree.
+the developer's local app/ reference tree.
 
 The manifest can be generated once with:
 
-    EAGLE_REFERENCE_APP=/path/to/extracted_app \
+    EAGLE_REFERENCE_APP=/path/to/app \
     python3 extract-installer.py \
         --generate-layout \
         Eagle-4.0-x64-build23.exe \
@@ -664,7 +664,7 @@ def load_layout(
             "Unpacked-file layout manifest is missing:\n"
             f"  {layout_path}\n\n"
             "Generate it once with:\n"
-            "  EAGLE_REFERENCE_APP=/path/to/extracted_app "
+            "  EAGLE_REFERENCE_APP=/path/to/app "
             "python3 extract-installer.py "
             "--generate-layout "
             "<installer.exe> "
@@ -1278,30 +1278,30 @@ def extract_eagle_installer(
     # Extract normal ASAR contents
     # --------------------------------------------------------------
 
-    extracted_app_dir = os.path.join(
+    app_dir = os.path.join(
         target_dir,
-        "extracted_app"
+        "app"
     )
 
     print(
         f"[*] Unpacking ASAR contents to: "
-        f"{extracted_app_dir}..."
+        f"{app_dir}..."
     )
 
     os.makedirs(
-        extracted_app_dir,
+        app_dir,
         exist_ok=True
     )
 
     unpack_asar(
         asar_data,
-        extracted_app_dir
+        app_dir
     )
 
     print(
         f"[+] Unpacked all normal ASAR "
         f"application files to "
-        f"{extracted_app_dir}"
+        f"{app_dir}"
     )
 
     print(
@@ -1574,7 +1574,7 @@ def main():
             "[layout.json]\n"
             "\n"
             "  Generate layout manifest:\n"
-            "    EAGLE_REFERENCE_APP=/path/to/extracted_app \\\n"
+            "    EAGLE_REFERENCE_APP=/path/to/app \\\n"
             "    python3 extract-installer.py "
             "--generate-layout "
             "<installer.exe> <layout.json>"
@@ -1588,7 +1588,7 @@ def main():
 
             print(
                 "Usage: "
-                "EAGLE_REFERENCE_APP=/path/to/extracted_app "
+                "EAGLE_REFERENCE_APP=/path/to/app "
                 "python3 extract-installer.py "
                 "--generate-layout "
                 "<installer.exe> "

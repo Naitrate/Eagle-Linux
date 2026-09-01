@@ -65,13 +65,13 @@ const eagleStubsDir = path.dirname(path.resolve(__filename));
 // AI Search is installed dynamically into:
 //   ~/.config/Eagle/Plugins/ai-search
 //
-// It is not part of extracted_app, so extracted_app_patches cannot modify it.
+// It is not part of app, so app_patches cannot modify it.
 // Patch the plugin after it appears on disk.
 // ==========================================================================
 
 const eagleTrayIconPng = path.join(
   eagleStubsDir,
-  'extracted_app',
+  'app',
   'assets',
   'icon.png'
 );
@@ -1595,7 +1595,7 @@ fs.stat = function(p, ...args) {
 
 const backupAppBundle = path.join(__dirname, 'backup/old_app_versions/3/app.bundle.js');
 const backupIndexHtml = path.join(__dirname, 'backup/old_app_versions/3/index.html');
-const backupRunJs = path.join(__dirname, 'backup/old_app_versions/3/extracted_app/run.js');
+const backupRunJs = path.join(__dirname, 'backup/old_app_versions/3/app/run.js');
 
 const untamperedRunJsBuffer = Buffer.from(
   '636f6e737420627974656e6f6465203d20726571756972652827627974656e6f646527293b0d0a636f6e7374207638203d20726571756972652827763827293b0d0a76382e736574466c61677346726f6d537472696e6728272d2d6e6f2d6c617a7927293b0d0a72657175697265285f5f6469726e616d65202b20272f72756e2e6a736327293b0d0a72657175697265285f5f6469726e616d65202b20272f6d61696e2e6a736327293b',
@@ -2525,7 +2525,7 @@ if (electron.systemPreferences) {
 let remoteMain;
 if (isMainProcess) {
   try {
-    const remoteMainPath = path.join(__dirname, 'extracted_app/node_modules/@electron/remote/main');
+    const remoteMainPath = path.join(__dirname, 'app/node_modules/@electron/remote/main');
     if (fs.existsSync(remoteMainPath) || fs.existsSync(remoteMainPath + '.js') || fs.existsSync(path.join(remoteMainPath, 'index.js'))) {
       remoteMain = require(remoteMainPath);
       if (remoteMain && typeof remoteMain.initialize === 'function') {
@@ -3028,7 +3028,7 @@ function initKdePlasmaShortcutsInternal() {
 
   let allKeybinds = {};
   try {
-    const defaultPrefsPath = path.join(eagleStubsDir, 'extracted_app', 'app', 'js', 'default-preferences.js');
+    const defaultPrefsPath = path.join(eagleStubsDir, 'app', 'app', 'js', 'default-preferences.js');
     if (fs.existsSync(defaultPrefsPath)) {
       const defaultPrefs = require(defaultPrefsPath);
       if (defaultPrefs && defaultPrefs.shortcuts && defaultPrefs.shortcuts.keybinds) {

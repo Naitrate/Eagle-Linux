@@ -69,7 +69,7 @@ Every Monday at midnight UTC, GitHub Actions runs `nix flake update` and automat
 If upstream Eagle releases a new Windows installer executable:
 
 ```bash
-EAGLE_REFERENCE_APP=./extracted_app \
+EAGLE_REFERENCE_APP=./app \
 python3 ./extract-installer.py \
   --generate-layout \
   ./Eagle-4.0-x64-buildXX.exe \

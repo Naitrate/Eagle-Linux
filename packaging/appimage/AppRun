@@ -15,10 +15,10 @@ else
     EAGLE_SHARE="/usr/share/eagle"
 fi
 
-export NODE_PATH="${EAGLE_SHARE}/extracted_app/node_modules:${NODE_PATH:-}"
+export NODE_PATH="${EAGLE_SHARE}/app/node_modules:${NODE_PATH:-}"
 
 STUBS="${EAGLE_SHARE}/stubs.js"
-APP="${EAGLE_SHARE}/extracted_app"
+APP="${EAGLE_SHARE}/app"
 
 # Locate Electron binary
 if [ -f "/app/electron/electron" ]; then

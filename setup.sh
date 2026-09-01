@@ -21,6 +21,6 @@ rm -rf ./app.asar.unpacked ./app.asar "$INSTALLER_EXE"
 
 echo "Extraction complete. Installing patch files..."
 
-cp -r ./extracted_app_patches/. ./extracted_app/
+cp -r ./app_patches/. ./app/
 
 echo "Patching complete."

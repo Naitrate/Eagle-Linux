@@ -36,11 +36,11 @@ modules:
     buildsystem: simple
     build-commands:
       - mkdir -p /app/bin /app/share/eagle /app/share/applications /app/share/icons/hicolor/512x512/apps /app/share/pixmaps /app/share/metainfo
-      - cp -r extracted_app /app/share/eagle/
+      - cp -r app /app/share/eagle/
       - cp stubs.js /app/share/eagle/
       - install -Dm755 packaging/appimage/AppRun /app/bin/eagle
-      - cp extracted_app/assets/icon.png /app/share/icons/hicolor/512x512/apps/cool.eagle.Eagle.png
-      - cp extracted_app/assets/icon.png /app/share/pixmaps/cool.eagle.Eagle.png
+      - cp app/assets/icon.png /app/share/icons/hicolor/512x512/apps/cool.eagle.Eagle.png
+      - cp app/assets/icon.png /app/share/pixmaps/cool.eagle.Eagle.png
       - install -Dm644 packaging/flatpak/cool.eagle.Eagle.desktop /app/share/applications/cool.eagle.Eagle.desktop
       - install -Dm644 packaging/flatpak/cool.eagle.Eagle.metainfo.xml /app/share/metainfo/cool.eagle.Eagle.metainfo.xml
     sources:

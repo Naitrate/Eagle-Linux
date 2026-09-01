@@ -27,9 +27,9 @@ Eagle helps you collect, search, and organize your design files in one place.
 %prep
 
 %build
-# Ensure extracted_app payload exists (extract if missing, e.g. COPR or mock chroots)
+# Ensure app payload exists (extract if missing, e.g. COPR or mock chroots)
 SRC_DIR="%{_sourcedir}"
-if [ ! -d "${SRC_DIR}/extracted_app" ] || [ ! -f "${SRC_DIR}/extracted_app/run.jsc" ]; then
+if [ ! -d "${SRC_DIR}/app" ] || [ ! -f "${SRC_DIR}/app/run.jsc" ]; then
     SCRIPT=""
     for candidate in \
         "${SRC_DIR}/ensure-extracted-app.sh" \
@@ -55,16 +55,16 @@ mkdir -p %{buildroot}/usr/share/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}/usr/share/pixmaps
 mkdir -p %{buildroot}/lib/udev/rules.d
 
-EXTRACTED_APP=""
+app=""
 STUBS_JS=""
 
 for candidate in \
-    "%{_sourcedir}/extracted_app" \
-    "%{_sourcedir}/../extracted_app" \
-    "$(dirname %{_sourcedir})/extracted_app" \
-    "$(dirname $(dirname %{_sourcedir}))/extracted_app"; do
+    "%{_sourcedir}/app" \
+    "%{_sourcedir}/../app" \
+    "$(dirname %{_sourcedir})/app" \
+    "$(dirname $(dirname %{_sourcedir}))/app"; do
     if [ -d "$candidate" ] && [ -f "$candidate/run.jsc" ]; then
-        EXTRACTED_APP="$candidate"
+        app="$candidate"
         break
     fi
 done
@@ -80,23 +80,23 @@ for candidate in \
     fi
 done
 
-if [ -z "$EXTRACTED_APP" ] || [ -z "$STUBS_JS" ]; then
-    echo "[ERROR] Could not locate extracted_app/ or stubs.js"
+if [ -z "$app" ] || [ -z "$STUBS_JS" ]; then
+    echo "[ERROR] Could not locate app/ or stubs.js"
     exit 1
 fi
 
-cp -r "${EXTRACTED_APP}" %{buildroot}/usr/share/eagle/
+cp -r "${app}" %{buildroot}/usr/share/eagle/
 cp "${STUBS_JS}" %{buildroot}/usr/share/eagle/stubs.js
-cp "${EXTRACTED_APP}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
-cp "${EXTRACTED_APP}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
+cp "${app}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
+cp "${app}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh
 export GTK_USE_PORTAL=1
-export NODE_PATH="/usr/share/eagle/extracted_app/node_modules:${NODE_PATH:-}"
+export NODE_PATH="/usr/share/eagle/app/node_modules:${NODE_PATH:-}"
 
 STUBS="/usr/share/eagle/stubs.js"
-APP="/usr/share/eagle/extracted_app"
+APP="/usr/share/eagle/app"
 
 if command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"

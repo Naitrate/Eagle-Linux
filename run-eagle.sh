@@ -9,6 +9,6 @@ export GTK_USE_PORTAL=1
 
 # Run Electron with the compatibility stub layer
 exec npx --yes electron@22.3.7 \
-    -r ./stubs.js extracted_app \
+    -r ./stubs.js app \
     --no-sandbox \
     "$@"
