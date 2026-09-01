@@ -18,7 +18,7 @@ Source1:        extract-installer.py
 Source2:        eagle-unpacked-layout.json
 Source3:        stubs.js
 
-Requires:       nodejs, python3, zstd, xdotool, ffmpeg, dbus-tools
+Requires:       nodejs, npm, python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description
 Eagle helps you collect, search, and organize your design files in one place.
