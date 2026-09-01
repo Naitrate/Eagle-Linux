@@ -17,7 +17,7 @@ fi
 
 export NODE_PATH="${EAGLE_SHARE}/app/node_modules:${NODE_PATH:-}"
 
-STUBS="${EAGLE_SHARE}/stubs.js"
+PATCH="${EAGLE_SHARE}/patch.js"
 APP="${EAGLE_SHARE}/app"
 
 # Locate Electron binary
@@ -48,7 +48,7 @@ echo "[INFO] Launching Eagle with ${ELECTRON_BIN}..."
 echo "[INFO] App directory: ${APP}"
 
 if [ -x "/app/bin/zypak-wrapper" ]; then
-    exec /app/bin/zypak-wrapper "${ELECTRON_BIN}" -r "${STUBS}" "${APP}" --no-sandbox "$@"
+    exec /app/bin/zypak-wrapper "${ELECTRON_BIN}" -r "${PATCH}" "${APP}" --no-sandbox "$@"
 else
-    exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
+    exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox "$@"
 fi

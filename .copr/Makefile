@@ -3,7 +3,8 @@ srpm:
 	cp packaging/ensure-extracted-app.sh $(outdir)/
 	cp extract-installer.py $(outdir)/
 	cp eagle-unpacked-layout.json $(outdir)/
-	cp stubs.js $(outdir)/
+	cp patch.js $(outdir)/
+	cp -r patches $(outdir)/
 	cp packaging/fedora/eagle.spec $(outdir)/
 	rpmbuild -bs \
 		--define "_sourcedir $(outdir)" \

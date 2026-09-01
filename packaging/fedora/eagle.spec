@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.0
+Version:        4.0.2
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -16,7 +16,7 @@ URL:            https://eagle.cool
 Source0:        ensure-extracted-app.sh
 Source1:        extract-installer.py
 Source2:        eagle-unpacked-layout.json
-Source3:        stubs.js
+Source3:        patch.js
 
 BuildRequires:  python3, curl, bash
 Requires:       nodejs, npm, python3, zstd, xdotool, ffmpeg, dbus-tools
@@ -56,7 +56,8 @@ mkdir -p %{buildroot}/usr/share/pixmaps
 mkdir -p %{buildroot}/lib/udev/rules.d
 
 app=""
-STUBS_JS=""
+PATCH_JS=""
+PATCHES_DIR=""
 
 for candidate in \
     "%{_sourcedir}/app" \
@@ -70,23 +71,38 @@ for candidate in \
 done
 
 for candidate in \
-    "%{_sourcedir}/stubs.js" \
-    "%{_sourcedir}/../stubs.js" \
-    "$(dirname %{_sourcedir})/stubs.js" \
-    "$(dirname $(dirname %{_sourcedir}))/stubs.js"; do
+    "%{_sourcedir}/patch.js" \
+    "%{_sourcedir}/../patch.js" \
+    "$(dirname %{_sourcedir})/patch.js" \
+    "$(dirname $(dirname %{_sourcedir}))/patch.js"; do
     if [ -f "$candidate" ]; then
-        STUBS_JS="$candidate"
+        PATCH_JS="$candidate"
         break
     fi
 done
 
-if [ -z "$app" ] || [ -z "$STUBS_JS" ]; then
-    echo "[ERROR] Could not locate app/ or stubs.js"
+for candidate in \
+    "%{_sourcedir}/patches" \
+    "%{_sourcedir}/../patches" \
+    "$(dirname %{_sourcedir})/patches" \
+    "$(dirname $(dirname %{_sourcedir}))/patches"; do
+    if [ -d "$candidate" ]; then
+        PATCHES_DIR="$candidate"
+        break
+    fi
+done
+
+# patch.js is a one-line shim around patches/index.js, so patches/ is just as
+# mandatory -- without it the package installs cleanly and then crashes on
+# launch. Fail the build instead.
+if [ -z "$app" ] || [ -z "$PATCH_JS" ] || [ -z "$PATCHES_DIR" ]; then
+    echo "[ERROR] Could not locate app/, patch.js or patches/"
     exit 1
 fi
 
 cp -r "${app}" %{buildroot}/usr/share/eagle/
-cp "${STUBS_JS}" %{buildroot}/usr/share/eagle/stubs.js
+cp "${PATCH_JS}" %{buildroot}/usr/share/eagle/patch.js
+cp -r "${PATCHES_DIR}" %{buildroot}/usr/share/eagle/
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 
@@ -95,7 +111,7 @@ cat << 'EOF' > %{buildroot}/usr/bin/eagle
 export GTK_USE_PORTAL=1
 export NODE_PATH="/usr/share/eagle/app/node_modules:${NODE_PATH:-}"
 
-STUBS="/usr/share/eagle/stubs.js"
+PATCH="/usr/share/eagle/patch.js"
 APP="/usr/share/eagle/app"
 
 if command -v electron22 >/dev/null 2>&1; then
@@ -119,7 +135,7 @@ else
     exit 1
 fi
 
-exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
+exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox "$@"
 EOF
 chmod +x %{buildroot}/usr/bin/eagle
 
@@ -176,5 +192,12 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
-* Mon Aug 31 2026 Bryce <bryce@example.com> - 4.0.0-1
+* Tue Sep 01 2026 Naitrate <git@naitrate.net> - 4.0.2-1
+- Migrate compatibility layer from stubs.js to modular patch.js + patches/
+- Require patches/ at build time; a missing tree now fails instead of
+  producing a package that crashes on launch
+- Restore main-window minimize/maximize/close controls
+- Correct anti-tamper digests for the app_patches XDG screen-capture build
+
+* Mon Aug 31 2026 Naitrate <git@naitrate.net> - 4.0.0-1
 - Initial Fedora / RHEL package for Eagle Linux Port

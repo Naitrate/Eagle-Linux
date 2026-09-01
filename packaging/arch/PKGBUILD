@@ -1,6 +1,6 @@
 # Maintainer: Bryce
 pkgname=eagle-bin
-pkgver=4.0.0
+pkgver=4.0.2
 pkgrel=1
 pkgdesc="Digital asset manager for designers (Linux Port)"
 arch=('x86_64')
@@ -18,7 +18,8 @@ package() {
     # Install application files
     install -d "$pkgdir/usr/share/eagle"
     cp -r "$REPO_DIR/app" "$pkgdir/usr/share/eagle/"
-    install -Dm644 "$REPO_DIR/stubs.js" "$pkgdir/usr/share/eagle/stubs.js"
+    install -Dm644 "$REPO_DIR/patch.js" "$pkgdir/usr/share/eagle/patch.js"
+    cp -r "$REPO_DIR/patches" "$pkgdir/usr/share/eagle/"
 
     # Install launcher wrapper
     install -d "$pkgdir/usr/bin"
@@ -27,7 +28,7 @@ package() {
 export GTK_USE_PORTAL=1
 export NODE_PATH="/usr/share/eagle/app/node_modules:${NODE_PATH:-}"
 
-STUBS="/usr/share/eagle/stubs.js"
+PATCH="/usr/share/eagle/patch.js"
 APP="/usr/share/eagle/app"
 
 if command -v electron22 >/dev/null 2>&1; then
@@ -51,7 +52,7 @@ else
     exit 1
 fi
 
-exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
+exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/eagle"
 

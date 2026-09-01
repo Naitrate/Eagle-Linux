@@ -5,7 +5,7 @@
 
 let
   pname = "eagle";
-  version = "4.0.0";
+  version = "4.0.2";
   appname = "Eagle";
 
   pythonPackages = ps: with ps; [
@@ -178,8 +178,9 @@ let
         cp "$eagle_assets/icon.png" "$eagle_assets/icon.ico"
       fi
 
-      echo "Installing stubs.js..."
-      cp "./stubs.js" "$out/share/eagle/stubs.js"
+      echo "Installing patch.js and patches folder..."
+      cp "./patch.js" "$out/share/eagle/patch.js"
+      cp -r "./patches" "$out/share/eagle/patches"
 
       echo "Normalizing permissions..."
       chmod -R u+rwX,go+rX "$out/share/eagle"
@@ -249,7 +250,7 @@ SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
 EOF
 
       makeWrapper ${pkgs.nodejs}/bin/npx "$out/bin/eagle" \
-        --add-flags "--yes electron@22.3.7 -r $out/share/eagle/stubs.js $out/share/eagle/app --no-sandbox" \
+        --add-flags "--yes electron@22.3.7 -r $out/share/eagle/patch.js $out/share/eagle/app --no-sandbox" \
         --set GTK_USE_PORTAL "1" \
         --prefix NODE_PATH : "$out/share/eagle/app/node_modules" \
         --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \

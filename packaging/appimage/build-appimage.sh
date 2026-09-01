@@ -16,12 +16,14 @@ if [ -d "${APPDIR}" ]; then
 fi
 mkdir -p "${APPDIR}/usr/bin" "${APPDIR}/usr/share/eagle" "${APPDIR}/usr/share/applications" "${APPDIR}/usr/share/icons/hicolor/512x512/apps" "${OUTPUT_DIR}"
 
-# Place app and stubs.js both in root and usr/share/eagle for universal compatibility
+# Place app, patch.js, and patches folder in root and usr/share/eagle
 cp -r "${REPO_DIR}/app" "${APPDIR}/app"
-cp "${REPO_DIR}/stubs.js" "${APPDIR}/stubs.js"
+cp "${REPO_DIR}/patch.js" "${APPDIR}/patch.js"
+cp -r "${REPO_DIR}/patches" "${APPDIR}/patches"
 
 cp -r "${REPO_DIR}/app" "${APPDIR}/usr/share/eagle/"
-cp "${REPO_DIR}/stubs.js" "${APPDIR}/usr/share/eagle/"
+cp "${REPO_DIR}/patch.js" "${APPDIR}/usr/share/eagle/"
+cp -r "${REPO_DIR}/patches" "${APPDIR}/usr/share/eagle/"
 
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
@@ -60,7 +62,7 @@ else
 fi
 
 echo "=== Packaging AppImage Binary ==="
-rm -f "${OUTPUT_DIR}/Eagle-4.0.0-x86_64.AppImage" 2>/dev/null || true
+rm -f "${OUTPUT_DIR}/Eagle-4.0.2-x86_64.AppImage" 2>/dev/null || true
 unset SOURCE_DATE_EPOCH || true
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_DIR}/Eagle-4.0.0-x86_64.AppImage"
-echo "=== Success: AppImage created at ${OUTPUT_DIR}/Eagle-4.0.0-x86_64.AppImage ==="
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_DIR}/Eagle-4.0.2-x86_64.AppImage"
+echo "=== Success: AppImage created at ${OUTPUT_DIR}/Eagle-4.0.2-x86_64.AppImage ==="

@@ -37,7 +37,8 @@ modules:
     build-commands:
       - mkdir -p /app/bin /app/share/eagle /app/share/applications /app/share/icons/hicolor/512x512/apps /app/share/pixmaps /app/share/metainfo
       - cp -r app /app/share/eagle/
-      - cp stubs.js /app/share/eagle/
+      - cp patch.js /app/share/eagle/
+      - cp -r patches /app/share/eagle/
       - install -Dm755 packaging/appimage/AppRun /app/bin/eagle
       - cp app/assets/icon.png /app/share/icons/hicolor/512x512/apps/cool.eagle.Eagle.png
       - cp app/assets/icon.png /app/share/pixmaps/cool.eagle.Eagle.png
