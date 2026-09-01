@@ -13,6 +13,12 @@ Summary:        Digital asset manager for designers (Linux Port)
 License:        Proprietary
 URL:            https://eagle.cool
 
+Source0:        ensure-extracted-app.sh
+Source1:        extract-installer.py
+Source2:        eagle-unpacked-layout.json
+Source3:        stubs.js
+
+BuildRequires:  bash, curl, python3
 Requires:       nodejs, python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description
@@ -22,20 +28,22 @@ Eagle helps you collect, search, and organize your design files in one place.
 
 %build
 # Ensure extracted_app payload exists (extract if missing, e.g. COPR or mock chroots)
-SCRIPT=""
-for candidate in \
-    "%{_sourcedir}/packaging/ensure-extracted-app.sh" \
-    "%{_sourcedir}/ensure-extracted-app.sh" \
-    "$(dirname %{_sourcedir})/packaging/ensure-extracted-app.sh" \
-    "$(dirname $(dirname %{_sourcedir}))/packaging/ensure-extracted-app.sh"; do
-    if [ -f "$candidate" ]; then
-        SCRIPT="$candidate"
-        break
-    fi
-done
+SRC_DIR="%{_sourcedir}"
+if [ ! -d "${SRC_DIR}/extracted_app" ] || [ ! -f "${SRC_DIR}/extracted_app/run.jsc" ]; then
+    SCRIPT=""
+    for candidate in \
+        "${SRC_DIR}/ensure-extracted-app.sh" \
+        "${SRC_DIR}/packaging/ensure-extracted-app.sh" \
+        "$(dirname ${SRC_DIR})/packaging/ensure-extracted-app.sh"; do
+        if [ -f "$candidate" ]; then
+            SCRIPT="$candidate"
+            break
+        fi
+    done
 
-if [ -n "$SCRIPT" ]; then
-    bash "$SCRIPT"
+    if [ -n "$SCRIPT" ]; then
+        bash "$SCRIPT"
+    fi
 fi
 
 %install
