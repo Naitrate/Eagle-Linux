@@ -63,6 +63,23 @@ let
     ];
   };
 
+  # Shared library closure for Electron.
+  #
+  # These feed both autoPatchelfHook (which rewrites NEEDED entries at build
+  # time) and the launcher's LD_LIBRARY_PATH. Both are required: Electron
+  # dlopen()s several of these -- libGL.so.1 most notably -- and a dlopen has
+  # no NEEDED entry for patchelf to rewrite, so without the runtime path the
+  # GPU process dies with "Could not dlopen libGL.so.1".
+  electronRuntimeLibs = with pkgs; [
+    alsa-lib at-spi2-atk at-spi2-core atk cairo cups dbus expat
+    fontconfig freetype gdk-pixbuf glib gtk3 libdrm libGL libxkbcommon
+    libnotify libpulseaudio libuuid mesa nspr nss pango stdenv.cc.cc.lib zlib
+    # X11 libraries. These live at the top level in current nixpkgs; the old
+    # pkgs.xorg.* aliases are deprecated.
+    libx11 libxcb libxcomposite libxcursor libxdamage libxext libxfixes
+    libxi libxrandr libxrender libxscrnsaver libxshmfence libxtst
+  ];
+
   # Electron runtime, bundled rather than bootstrapped at first launch.
   #
   # Eagle used to launch through `npx electron@22.3.7`, which no longer works
@@ -82,15 +99,7 @@ let
 
     nativeBuildInputs = [ pkgs.unzip pkgs.autoPatchelfHook ];
 
-    buildInputs = with pkgs; [
-      alsa-lib at-spi2-atk at-spi2-core atk cairo cups dbus expat
-      fontconfig freetype gdk-pixbuf glib gtk3 libdrm libGL libxkbcommon
-      libnotify libpulseaudio libuuid mesa nspr nss pango stdenv.cc.cc.lib zlib
-      # X11 libraries Electron dlopens at runtime. These live at the top level
-      # in current nixpkgs; the old pkgs.xorg.* aliases are deprecated.
-      libx11 libxcb libxcomposite libxcursor libxdamage libxext libxfixes
-      libxi libxrandr libxrender libxscrnsaver libxshmfence libxtst
-    ];
+    buildInputs = electronRuntimeLibs;
 
     # The zip has no top-level directory.
     sourceRoot = ".";
@@ -325,11 +334,7 @@ EOF
           ++ (if enableAiSearch then [ aiPythonEnv ] else [])
         )}" \
         --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath (
-          [
-            pkgs.stdenv.cc.cc.lib
-            pkgs.zlib
-            pkgs.glib
-          ]
+          electronRuntimeLibs
           ++ (if enableAiSearch then [ aiPythonEnv ] else [])
         )}"
 
