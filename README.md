@@ -63,6 +63,9 @@ sudo dnf copr enable naitrate/eagle
 sudo dnf install eagle
 ```
 
+> [!NOTE]
+> For package maintainer documentation on COPR repository setup using `make srpm`, see [`packaging/fedora/COPR.md`](packaging/fedora/COPR.md).
+
 ---
 
 ## 📦 Flatpak Repository Setup

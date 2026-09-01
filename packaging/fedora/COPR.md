@@ -9,9 +9,12 @@ This file documents the exact configuration required to build the `eagle` RPM pa
 | **Type** | Git |
 | **Clone URL** | `https://github.com/Naitrate/Eagle-Linux.git` |
 | **Committish** | *(leave empty or `master`)* |
-| **Subdirectory** | `.` (or leave empty) |
+| **Subdirectory** | `.` |
 | **Spec File** | `./packaging/fedora/eagle.spec` |
-| **Build Method** | **`make srpm`** *(Required to copy root sources into SRPM without duplication)* |
+| **Build Method** | **`make srpm`** *(Required: Uses `.copr/Makefile` to assemble SRPM sources without repository file duplication)* |
+
+> [!IMPORTANT]
+> **Build Method MUST be set to `make srpm`**. Selecting `rpkg` will cause builds to fail because `rpkg` isolates the spec file without resolving top-level source dependencies. `make srpm` triggers `.copr/Makefile` which properly copies source files into COPR's output directory.
 
 ## 2. Build Isolation Settings
 
