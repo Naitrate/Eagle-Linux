@@ -62,10 +62,10 @@ jobs:
               <p>Official static OSTree repository for <a href="https://github.com/Naitrate/Eagle-Linux">Eagle Linux Port</a>.</p>
               <h2>Installation Instructions</h2>
               <pre><code># 1. Add the Flatpak repository
-flatpak remote-add --user --if-not-exists eagle-repo https://naitrate.github.io/Eagle-Linux/eagle.flatpakrepo
+              flatpak remote-add --user --if-not-exists eagle-repo https://naitrate.github.io/Eagle-Linux/eagle.flatpakrepo
 
-# 2. Install Eagle
-flatpak install --user eagle-repo cool.eagle.Eagle</code></pre>
+              # 2. Install Eagle
+              flatpak install --user eagle-repo cool.eagle.Eagle</code></pre>
           </body>
           </html>
           EOF
