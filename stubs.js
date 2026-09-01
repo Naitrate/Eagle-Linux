@@ -2,6 +2,44 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+
+// MD5 Hash mapping to pass anti-tamper
+const md5Hashes = {
+  'afe9aeeb940d22a258040a29934130ff': 'f9a77da6177275249fb3ab3a9bc9e799',
+  'f447d0d0e9e2328604d79732b6f16f88': 'f9a77da6177275249fb3ab3a9bc9e799',
+  'c2d4bad4bd8d772031ca6a377d51b011': 'f9a77da6177275249fb3ab3a9bc9e799',
+  '666f230ec6266eb366f06f475939f3f6': '74a46ea6e50b477401d325c40136573c',
+  '38cbbdf0801776761f36e149447cb1a7': '479b7f739abd467eba6c33da0d6a6fd8'
+};
+
+const origCreateHash = crypto.createHash;
+crypto.createHash = function(algorithm, options) {
+  const hash = origCreateHash.call(crypto, algorithm, options);
+  if (typeof algorithm === 'string' && algorithm.toLowerCase() === 'md5') {
+    const origDigest = hash.digest;
+    hash.digest = function(encoding) {
+      let buf;
+      try {
+        buf = origDigest.apply(this, arguments);
+      } catch (e) {
+        return origDigest.apply(this, arguments);
+      }
+      const strHex = (Buffer.isBuffer(buf) ? buf.toString('hex') : String(buf)).toLowerCase();
+      console.log(`[STUBS MD5 HASH COMPUTED]: ${strHex}`);
+      if (md5Hashes[strHex]) {
+        console.log(`[STUBS MD5 REWRITTEN]: ${strHex} -> ${md5Hashes[strHex]}`);
+        const targetHex = md5Hashes[strHex];
+        const targetBuf = Buffer.from(targetHex, 'hex');
+        if (!encoding) return targetBuf;
+        if (encoding === 'hex') return targetHex;
+        return targetBuf.toString(encoding);
+      }
+      return buf;
+    };
+  }
+  return hash;
+};
+
 const electron = require('electron');
 const child_process = require('child_process');
 const isMainProcess = !process.type || process.type === 'browser';
@@ -1422,6 +1460,7 @@ const origFs = {
 
 // Hook fs existence, access, stat, read, open for Windows paths and DLL checks
 fs.existsSync = function(p) {
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) return true;
   if (typeof p === 'string' && (p.endsWith('DisableEdge') || p.includes('DisableEdge'))) return true;
   if (typeof p === 'string' && (p.includes('edge_coreclr') || p.includes('edge_nativeclr') || p.includes('electron-edge-js'))) return true;
   if (typeof p === 'string' && (p.includes('NiuniuCapture.exe') || p.includes('NiuniuCapture.dll'))) return true;
@@ -1433,6 +1472,7 @@ fs.accessSync = function(p, mode) {
   if (typeof p === 'number' || (typeof p !== 'string' && !Buffer.isBuffer(p) && !(p instanceof URL))) {
     return undefined;
   }
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) return undefined;
   if (isHostPath(p) || isDllPath(p)) return undefined;
   return origFs.accessSync.apply(this, arguments);
 };
@@ -1440,6 +1480,10 @@ fs.accessSync = function(p, mode) {
 fs.access = function(p, ...args) {
   const cb = args.find(a => typeof a === 'function');
   if (typeof p === 'number' || (typeof p !== 'string' && !Buffer.isBuffer(p) && !(p instanceof URL))) {
+    if (cb) process.nextTick(() => cb(null));
+    return;
+  }
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) {
     if (cb) process.nextTick(() => cb(null));
     return;
   }
@@ -1451,6 +1495,7 @@ fs.access = function(p, ...args) {
 };
 
 fs.statSync = function(p, opts) {
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) return dummyStat;
   if (typeof p === 'string' && p.includes('app.bundle.js')) {
     const stat = origFs.statSync.call(this, p, opts);
     return Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: 4408963 });
@@ -1461,6 +1506,10 @@ fs.statSync = function(p, opts) {
 
 fs.stat = function(p, ...args) {
   const cb = args.find(a => typeof a === 'function');
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) {
+    if (cb) process.nextTick(() => cb(null, dummyStat));
+    return;
+  }
   if (isHostPath(p) || isDllPath(p)) {
     if (cb) process.nextTick(() => cb(null, dummyStat));
     return;
@@ -1468,9 +1517,9 @@ fs.stat = function(p, ...args) {
   return origFs.stat.apply(this, args);
 };
 
-const backupAppBundle = path.join(__dirname, 'backup/1/extracted_app/app/app.bundle.js');
-const backupIndexHtml = path.join(__dirname, 'backup/1/extracted_app/app/index.html');
-const backupRunJs = path.join(__dirname, 'backup/1/extracted_app/run.js');
+const backupAppBundle = path.join(__dirname, 'backup/old_app_versions/3/app.bundle.js');
+const backupIndexHtml = path.join(__dirname, 'backup/old_app_versions/3/index.html');
+const backupRunJs = path.join(__dirname, 'backup/old_app_versions/3/extracted_app/run.js');
 
 const untamperedRunJsBuffer = Buffer.from(
   '636f6e737420627974656e6f6465203d20726571756972652827627974656e6f646527293b0d0a636f6e7374207638203d20726571756972652827763827293b0d0a76382e736574466c61677346726f6d537472696e6728272d2d6e6f2d6c617a7927293b0d0a72657175697265285f5f6469726e616d65202b20272f72756e2e6a736327293b0d0a72657175697265285f5f6469726e616d65202b20272f6d61696e2e6a736327293b',
@@ -1491,16 +1540,42 @@ if (electron.app) {
   });
 }
 
-fs.readFileSync = function(p, opts) {
-  if (typeof p === 'string' && !p.includes('stubs')) {
-    const stack = (new Error().stack || '');
-    const isTamper =
-    isAppReadyForTamperCheck ||
-    stack.includes('evalmachine') ||
-    stack.includes('tamper') ||
-    stack.includes('hash');
+function isHostPath(p) {
+  if (!p) return false;
+  const str = String(p).toLowerCase();
+  return str.startsWith('c:') || str.includes('system32') || str.includes('drivers') || str.includes('hosts');
+}
 
-    // ...existing tamper-check code...
+fs.readFileSync = function(p, opts) {
+  if (typeof p === 'string' && (p.includes('ipv4_data') || p.includes('Certifications'))) {
+    console.log('[STUBS FS] Serving dummy data for ipv4_data/Certifications:', p);
+    return Buffer.alloc(64);
+  }
+  if (typeof p === 'string' && !p.includes('stubs')) {
+    if ((p.endsWith('run.js') || p.endsWith('/run.js') || p.endsWith('\\run.js')) && !p.endsWith('.jsc')) {
+      console.log('[STUBS FS] Intercepted readFileSync for run.js tamper check on:', p);
+      const enc = parseEncoding(opts);
+      const res = origFs.existsSync(backupRunJs) ? origFs.readFileSync.call(fs, backupRunJs) : untamperedRunJsBuffer;
+      return enc ? res.toString(enc) : res;
+    }
+
+    if (p.includes('app.bundle.js')) {
+      console.log('[STUBS FS] Intercepted readFileSync for app.bundle.js tamper check on:', p);
+      const enc = parseEncoding(opts);
+      if (origFs.existsSync(backupAppBundle)) {
+        const b = origFs.readFileSync.call(fs, backupAppBundle);
+        return enc ? b.toString(enc) : b;
+      }
+    }
+
+    if ((p.endsWith('index.html') || p.endsWith('/index.html') || p.endsWith('\\index.html')) && !p.includes('node_modules')) {
+      console.log('[STUBS FS] Intercepted readFileSync for index.html tamper check on:', p);
+      const enc = parseEncoding(opts);
+      if (origFs.existsSync(backupIndexHtml)) {
+        const b = origFs.readFileSync.call(fs, backupIndexHtml);
+        return enc ? b.toString(enc) : b;
+      }
+    }
   }
 
   if (isHostPath(p)) {
@@ -1514,22 +1589,19 @@ fs.readFile = function(p, ...args) {
   const cb = args.find(a => typeof a === 'function');
   const opts = args.find(a => typeof a === 'string' || (a && typeof a === 'object'));
   if (typeof p === 'string' && !p.includes('stubs')) {
-    const stack = (new Error().stack || '');
-    const isTamper = isAppReadyForTamperCheck || stack.includes('evalmachine') || stack.includes('tamper') || stack.includes('hash');
-
-    if (isTamper && (p.endsWith('run.js') || p.endsWith('/run.js') || p.endsWith('\\run.js'))) {
+    if (p.endsWith('run.js') || p.endsWith('/run.js') || p.endsWith('\\run.js')) {
       console.log('[STUBS FS] Intercepted readFile for run.js tamper check on:', p);
       const enc = parseEncoding(opts);
-      const res = (fs.existsSync(backupRunJs)) ? origFs.readFileSync.call(fs, backupRunJs) : untamperedRunJsBuffer;
+      const res = origFs.existsSync(backupRunJs) ? origFs.readFileSync.call(fs, backupRunJs) : untamperedRunJsBuffer;
       const formatted = enc ? res.toString(enc) : res;
       if (cb) process.nextTick(() => cb(null, formatted));
       return;
     }
 
-    if (isTamper && p.includes('app.bundle.js')) {
+    if (p.includes('app.bundle.js')) {
       console.log('[STUBS FS] Intercepted readFile for app.bundle.js tamper check on:', p);
       const enc = parseEncoding(opts);
-      if (fs.existsSync(backupAppBundle)) {
+      if (origFs.existsSync(backupAppBundle)) {
         const b = origFs.readFileSync.call(fs, backupAppBundle);
         const formatted = enc ? b.toString(enc) : b;
         if (cb) process.nextTick(() => cb(null, formatted));
@@ -1537,10 +1609,10 @@ fs.readFile = function(p, ...args) {
       }
     }
 
-    if (isTamper && (p.endsWith('index.html') || p.endsWith('/index.html') || p.endsWith('\\index.html'))) {
+    if (p.endsWith('index.html') || p.endsWith('/index.html') || p.endsWith('\\index.html')) {
       console.log('[STUBS FS] Intercepted readFile for index.html tamper check on:', p);
       const enc = parseEncoding(opts);
-      if (fs.existsSync(backupIndexHtml)) {
+      if (origFs.existsSync(backupIndexHtml)) {
         const b = origFs.readFileSync.call(fs, backupIndexHtml);
         const formatted = enc ? b.toString(enc) : b;
         if (cb) process.nextTick(() => cb(null, formatted));
@@ -1931,11 +2003,54 @@ function getMockRegOutput() {
   return `HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\n    MachineGuid    REG_SZ    ${SYSTEM_MACHINE_GUID}\n`;
 }
 
+let cachedPowerShellBin = undefined;
+
+function getPowerShellBinary() {
+  if (cachedPowerShellBin !== undefined) {
+    return cachedPowerShellBin;
+  }
+
+  const envPath = process.env.PATH || '';
+  const pathDirs = envPath.split(path.delimiter);
+
+  const candidates = process.platform === 'win32'
+    ? ['pwsh.exe', 'powershell.exe', 'pwsh', 'powershell']
+    : ['pwsh', 'powershell', 'pwsh.exe', 'powershell.exe'];
+
+  for (const candidate of candidates) {
+    for (const dir of pathDirs) {
+      if (!dir) continue;
+      const fullPath = path.join(dir, candidate);
+      try {
+        if (fs.existsSync(fullPath)) {
+          const stat = fs.statSync(fullPath);
+          if (stat.isFile() && (process.platform === 'win32' || (stat.mode & 0o111) !== 0)) {
+            console.log(`[STUBS POWERSHELL DETECTED ON PATH]: ${candidate} at ${fullPath}`);
+            cachedPowerShellBin = candidate;
+            return cachedPowerShellBin;
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  console.log('[STUBS POWERSHELL NOT FOUND ON PATH]: Falling back to bash conversion.');
+  cachedPowerShellBin = null;
+  return null;
+}
+
 child_process.execFileSync = function(file, args, options) {
   const cmdStr = (file || '') + ' ' + (Array.isArray(args) ? args.join(' ') : '');
   if (isMachineIdQuery(cmdStr)) {
     console.log('[STUBS MACHINE ID QUERY (execFileSync)]:', cmdStr);
     return getMockRegOutput();
+  }
+  if (typeof file === 'string' && (file.includes('powershell') || file.includes('powershell.exe'))) {
+    const psBin = getPowerShellBinary();
+    if (psBin) {
+      console.log(`[STUBS POWERSHELL (execFileSync)]: ${file} -> ${psBin}`);
+      return origExecFileSync.call(this, psBin, args, options);
+    }
   }
   const resolved = resolveMediaBin(file);
   if (resolved !== file) {
@@ -1953,6 +2068,13 @@ child_process.execFile = function(file, args, options, callback) {
     if (callback) callback(null, getMockRegOutput(), '');
     return;
   }
+  if (typeof file === 'string' && (file.includes('powershell') || file.includes('powershell.exe'))) {
+    const psBin = getPowerShellBinary();
+    if (psBin) {
+      console.log(`[STUBS POWERSHELL (execFile)]: ${file} -> ${psBin}`);
+      return origExecFile.call(this, psBin, args, options, callback);
+    }
+  }
   const resolved = resolveMediaBin(file);
   if (resolved !== file) {
     console.log(`[STUBS EXECFILE REDIRECT]: ${file} -> ${resolved}`);
@@ -1967,23 +2089,35 @@ child_process.execSync = function(cmd, opts) {
     return getMockRegOutput();
   }
   if (typeof cmd === 'string' && (cmd.includes('powershell') || cmd.includes('powershell.exe'))) {
-    let cleanCmd = cmd
-      .replace(/powershell(\.exe)?/gi, '')
-      .replace(/-NoProfile/gi, '')
-      .replace(/-NonInteractive/gi, '')
-      .replace(/-Command/gi, '')
-      .replace(/Remove-item alias:curl;/gi, '')
-      .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
-      .trim();
-    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
-      cleanCmd = cleanCmd.slice(1, -1).trim();
-    }
-    console.log(`[STUBS POWERSHELL -> SH (execSync)]: ${cleanCmd}`);
-    try {
-      return origExecSync.call(this, cleanCmd, opts);
-    } catch (err) {
-      console.log(`[STUBS POWERSHELL -> SH FALLBACK (execSync)] Error:`, err.message);
-      return Buffer.from('');
+    const psBin = getPowerShellBinary();
+    if (psBin) {
+      const psCmd = cmd.replace(/powershell(\.exe)?/gi, psBin);
+      console.log(`[STUBS POWERSHELL -> ${psBin.toUpperCase()} (execSync)]: ${psCmd}`);
+      try {
+        return origExecSync.call(this, psCmd, opts);
+      } catch (err) {
+        console.log(`[STUBS POWERSHELL EXEC ERROR (execSync)]: ${err.message}`);
+        return Buffer.from('');
+      }
+    } else {
+      let cleanCmd = cmd
+        .replace(/powershell(\.exe)?/gi, '')
+        .replace(/-NoProfile/gi, '')
+        .replace(/-NonInteractive/gi, '')
+        .replace(/-Command/gi, '')
+        .replace(/Remove-item alias:curl;/gi, '')
+        .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+        .trim();
+      if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+        cleanCmd = cleanCmd.slice(1, -1).trim();
+      }
+      console.log(`[STUBS POWERSHELL -> SH (execSync)]: ${cleanCmd}`);
+      try {
+        return origExecSync.call(this, cleanCmd, opts);
+      } catch (err) {
+        console.log(`[STUBS POWERSHELL -> SH FALLBACK (execSync)] Error:`, err.message);
+        return Buffer.from('');
+      }
     }
   }
   return origExecSync.apply(this, arguments);
@@ -1997,19 +2131,26 @@ child_process.exec = function(cmd, opts, cb) {
     return;
   }
   if (typeof cmd === 'string' && (cmd.includes('powershell') || cmd.includes('powershell.exe'))) {
-    let cleanCmd = cmd
-      .replace(/powershell(\.exe)?/gi, '')
-      .replace(/-NoProfile/gi, '')
-      .replace(/-NonInteractive/gi, '')
-      .replace(/-Command/gi, '')
-      .replace(/Remove-item alias:curl;/gi, '')
-      .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
-      .trim();
-    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
-      cleanCmd = cleanCmd.slice(1, -1).trim();
+    const psBin = getPowerShellBinary();
+    if (psBin) {
+      const psCmd = cmd.replace(/powershell(\.exe)?/gi, psBin);
+      console.log(`[STUBS POWERSHELL -> ${psBin.toUpperCase()} (exec)]: ${psCmd}`);
+      return origExec.call(this, psCmd, opts, cb);
+    } else {
+      let cleanCmd = cmd
+        .replace(/powershell(\.exe)?/gi, '')
+        .replace(/-NoProfile/gi, '')
+        .replace(/-NonInteractive/gi, '')
+        .replace(/-Command/gi, '')
+        .replace(/Remove-item alias:curl;/gi, '')
+        .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+        .trim();
+      if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+        cleanCmd = cleanCmd.slice(1, -1).trim();
+      }
+      console.log(`[STUBS POWERSHELL -> SH (exec)]: ${cleanCmd}`);
+      return origExec.call(this, cleanCmd, opts, cb);
     }
-    console.log(`[STUBS POWERSHELL -> SH (exec)]: ${cleanCmd}`);
-    return origExec.call(this, cleanCmd, opts, cb);
   }
   return origExec.call(this, cmd, opts, cb);
 };
@@ -2044,20 +2185,26 @@ child_process.spawn = function(command, args, options) {
       return dummyProc;
     }
 
-    let cleanCmd = scriptCmd
-      .replace(/Remove-item alias:curl;/gi, '')
-      .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
-      .replace(/-NoProfile/gi, '')
-      .replace(/-NonInteractive/gi, '')
-      .replace(/-Command/gi, '')
-      .trim();
+    const psBin = getPowerShellBinary();
+    if (psBin) {
+      console.log(`[STUBS POWERSHELL -> ${psBin.toUpperCase()} FORWARDING]: ${psBin} ${scriptCmd}`);
+      return origSpawn.call(this, psBin, args, options);
+    } else {
+      let cleanCmd = scriptCmd
+        .replace(/Remove-item alias:curl;/gi, '')
+        .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+        .replace(/-NoProfile/gi, '')
+        .replace(/-NonInteractive/gi, '')
+        .replace(/-Command/gi, '')
+        .trim();
 
-    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
-      cleanCmd = cleanCmd.slice(1, -1).trim();
+      if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+        cleanCmd = cleanCmd.slice(1, -1).trim();
+      }
+
+      console.log(`[STUBS POWERSHELL -> SH FORWARDING]: /bin/sh -c "${cleanCmd}"`);
+      return origSpawn.call(this, '/bin/sh', ['-c', cleanCmd], options);
     }
-
-    console.log(`[STUBS POWERSHELL -> SH FORWARDING]: /bin/sh -c "${cleanCmd}"`);
-    return origSpawn.call(this, '/bin/sh', ['-c', cleanCmd], options);
   }
 
   if (typeof command === 'string' && command.includes('cmd.exe')) {
@@ -2079,43 +2226,7 @@ child_process.spawn = function(command, args, options) {
   return origSpawn.apply(this, arguments);
 };
 
-// MD5 Hash mapping to pass anti-tamper
-const md5Hashes = {
-  'afe9aeeb940d22a258040a29934130ff': 'f9a77da6177275249fb3ab3a9bc9e799',
-  'f447d0d0e9e2328604d79732b6f16f88': 'f9a77da6177275249fb3ab3a9bc9e799',
-  'c2d4bad4bd8d772031ca6a377d51b011': 'f9a77da6177275249fb3ab3a9bc9e799',
-  '666f230ec6266eb366f06f475939f3f6': '74a46ea6e50b477401d325c40136573c',
-  '38cbbdf0801776761f36e149447cb1a7': '479b7f739abd467eba6c33da0d6a6fd8'
-};
-
-const origCreateHash = crypto.createHash;
-crypto.createHash = function(algorithm, options) {
-  const hash = origCreateHash.call(crypto, algorithm, options);
-  if (typeof algorithm === 'string' && algorithm.toLowerCase() === 'md5') {
-    const origDigest = hash.digest;
-    hash.digest = function(encoding) {
-      let buf;
-      try {
-        buf = encoding ? origDigest.call(this) : origDigest.apply(this, arguments);
-      } catch (e) {
-        return origDigest.apply(this, arguments);
-      }
-      const strHex = (Buffer.isBuffer(buf) ? buf.toString('hex') : String(buf)).toLowerCase();
-      if (md5Hashes[strHex]) {
-        const targetHex = md5Hashes[strHex];
-        const targetBuf = Buffer.from(targetHex, 'hex');
-        if (!encoding) return targetBuf;
-        if (encoding === 'hex') return targetHex;
-        return targetBuf.toString(encoding);
-      }
-      if (encoding && Buffer.isBuffer(buf)) {
-        return buf.toString(encoding);
-      }
-      return buf;
-    };
-  }
-  return hash;
-};
+// (md5Hashes and crypto.createHash are initialized at top of stubs.js)
 
 // Intercept dialog.showOpenDialog for GTK directory selection
 if (electron.dialog) {
@@ -2346,46 +2457,56 @@ const Module = require('module');
 
 const origDlopen = process.dlopen;
 process.dlopen = function(module, filename, flags) {
+  if (typeof filename === 'string' && (filename.endsWith('.dll') || filename.includes('.dll') || filename.endsWith('.node') || filename.includes('/build/Release/') || filename.includes('win32') || filename.includes('edge'))) {
+    console.log(`[STUBS] Preventing native dlopen on Win32/DLL binary: ${filename}`);
+    module.exports = createCallableProxy();
+    return true;
+  }
   try {
     return origDlopen.call(process, module, filename, flags);
   } catch (err) {
+    console.log(`[STUBS] Native dlopen failed safely for: ${filename}`);
     module.exports = createCallableProxy();
     return true;
   }
 };
 
 if (Module._extensions['.node']) {
-  const origNodeExt = Module._extensions['.node'];
   Module._extensions['.node'] = function(module, filename) {
-    try {
-      return origNodeExt.call(this, module, filename);
-    } catch (err) {
-      module.exports = createCallableProxy();
-    }
+    console.log(`[STUBS] Intercepted .node extension load: ${filename}`);
+    module.exports = createCallableProxy();
   };
 }
 
 const origResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, isMain, options) {
   if (typeof request === 'string' && (request.includes('edge_coreclr') || request.includes('edge_nativeclr') || request.includes('electron-edge-js'))) {
-    return 'edge_coreclr.node';
+    return 'electron-edge-js';
   }
   return origResolveFilename.apply(this, arguments);
 };
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
-  if (typeof request === 'string' && (request.includes('electron-edge-js') || request.includes('edge') || request.includes('edge_coreclr') || request === 'edge_coreclr.node')) {
-    console.log(`[STUBS] Intercepted edge module load: ${request}`);
-    const dummyEdgeFunc = function() {
-      const asyncFn = function(data, cb) {
-        if (typeof cb === 'function') process.nextTick(() => cb(null, null));
-        return Promise.resolve(null);
+  if (typeof request === 'string') {
+    const lowerReq = request.toLowerCase();
+    if (lowerReq.includes('electron-edge-js') || lowerReq.includes('edge') || lowerReq.includes('edge_coreclr') || lowerReq === 'edge_coreclr.node') {
+      console.log(`[STUBS] Intercepted edge module load: ${request}`);
+      const dummyEdgeFunc = function() {
+        const asyncFn = function(data, cb) {
+          if (typeof cb === 'function') process.nextTick(() => cb(null, null));
+          return Promise.resolve(null);
+        };
+        return asyncFn;
       };
-      return asyncFn;
-    };
-    dummyEdgeFunc.func = dummyEdgeFunc;
-    return dummyEdgeFunc;
+      dummyEdgeFunc.func = dummyEdgeFunc;
+      return dummyEdgeFunc;
+    }
+
+    if (lowerReq.endsWith('.node') || (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) || lowerReq.includes('winreg') || lowerReq.includes('ffi') || lowerReq.includes('ref') || lowerReq.includes('windows-foreground-love') || lowerReq.includes('forcefocus')) {
+      console.log(`[STUBS] Intercepted native module load before dlopen: ${request}`);
+      return createCallableProxy();
+    }
   }
 
   if (typeof request === 'string' && (request.includes('auto-launch') || request.includes('AutoLaunch'))) {
