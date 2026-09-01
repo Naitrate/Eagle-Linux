@@ -13,7 +13,7 @@ Summary:        Digital asset manager for designers (Linux Port)
 License:        Proprietary
 URL:            https://eagle.cool
 
-Requires:       electron, python3, zstd, xdotool, ffmpeg, dbus-tools
+Requires:       nodejs, python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description
 Eagle helps you collect, search, and organize your design files in one place.
@@ -39,7 +39,22 @@ cp %{_sourcedir}/extracted_app/assets/icon.png %{buildroot}/usr/share/pixmaps/ea
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh
 export GTK_USE_PORTAL=1
-exec electron -r /usr/share/eagle/stubs.js /usr/share/eagle/extracted_app --no-sandbox "$@"
+
+STUBS="/usr/share/eagle/stubs.js"
+APP="/usr/share/eagle/extracted_app"
+
+if command -v electron >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron)"
+elif command -v electron22 >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron22)"
+elif command -v npx >/dev/null 2>&1; then
+    ELECTRON_BIN="npx --yes electron@22.3.7"
+else
+    echo "[ERROR] No Electron runtime or nodejs/npx found. Please install nodejs."
+    exit 1
+fi
+
+exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
 EOF
 chmod +x %{buildroot}/usr/bin/eagle
 
