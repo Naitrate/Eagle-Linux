@@ -13,10 +13,10 @@ Summary:        Digital asset manager for designers (Linux Port)
 License:        Proprietary
 URL:            https://eagle.cool
 
-Source0:        ensure-extracted-app.sh
-Source1:        extract-installer.py
-Source2:        eagle-unpacked-layout.json
-Source3:        stubs.js
+Source0:        ../../packaging/ensure-extracted-app.sh
+Source1:        ../../extract-installer.py
+Source2:        ../../eagle-unpacked-layout.json
+Source3:        ../../stubs.js
 
 BuildRequires:  bash, curl, python3
 Requires:       nodejs, python3, zstd, xdotool, ffmpeg, dbus-tools
