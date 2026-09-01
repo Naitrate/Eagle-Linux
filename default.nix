@@ -65,15 +65,15 @@ let
 
   # Shared library closure for Electron.
   #
-  # These feed both autoPatchelfHook (which rewrites NEEDED entries at build
-  # time) and the launcher's LD_LIBRARY_PATH. Both are required: Electron
-  # dlopen()s several of these -- libGL.so.1 most notably -- and a dlopen has
-  # no NEEDED entry for patchelf to rewrite, so without the runtime path the
-  # GPU process dies with "Could not dlopen libGL.so.1".
+  # Also prepended to the launcher's LD_LIBRARY_PATH: Electron dlopen()s
+  # several of these, and a dlopen has no NEEDED entry for patchelf to
+  # rewrite. libglvnd is only the GL dispatch layer -- the driver itself
+  # lives in /run/opengl-driver/lib, which the wrapper adds separately.
   electronRuntimeLibs = with pkgs; [
     alsa-lib at-spi2-atk at-spi2-core atk cairo cups dbus expat
-    fontconfig freetype gdk-pixbuf glib gtk3 libdrm libGL libxkbcommon
-    libnotify libpulseaudio libuuid mesa nspr nss pango stdenv.cc.cc.lib zlib
+    fontconfig freetype gdk-pixbuf glib gtk3 libdrm libgbm libGL libnotify
+    libpulseaudio libsecret libuuid libxkbcommon libxkbfile mesa nspr nss
+    pango pciutils pipewire stdenv.cc.cc.lib systemd vulkan-loader zlib
     # X11 libraries. These live at the top level in current nixpkgs; the old
     # pkgs.xorg.* aliases are deprecated.
     libx11 libxcb libxcomposite libxcursor libxdamage libxext libxfixes
@@ -85,44 +85,68 @@ let
   # Eagle used to launch through `npx electron@22.3.7`, which no longer works
   # on current toolchains: npm >= 12 blocks install scripts via allowScripts,
   # and on Node >= 26 the extract-zip in Electron's install.js fails silently.
-  # Nixpkgs no longer carries Electron 22 (only 35+), so fetch the upstream
-  # binary release and patchelf it against the runtime libraries.
-  electron22 = pkgs.stdenv.mkDerivation rec {
+  # Nixpkgs no longer carries Electron 22 (only 41+ are supported), so fetch
+  # the upstream binary release and patch it here.
+  #
+  # This deliberately mirrors nixpkgs' own electron-*-bin recipe and does NOT
+  # use autoPatchelfHook. autoPatchelfHook rewrites every ELF in the tree,
+  # which leaves Electron unable to fork its zygote ("Zygote could not fork")
+  # and makes Crashpad's ELF reader fail, killing the process with SIGTRAP
+  # before it ever opens a window. Patching only the two executables, and
+  # pointing their rpath at the unpacked directory so they resolve their own
+  # bundled .so files, avoids that.
+  electron22 = pkgs.stdenv.mkDerivation (finalAttrs: {
     pname = "electron";
     version = "22.3.7";
 
     src = pkgs.fetchurl {
-      url = "https://github.com/electron/electron/releases/download/v${version}/electron-v${version}-linux-x64.zip";
+      url = "https://github.com/electron/electron/releases/download/v${finalAttrs.version}/electron-v${finalAttrs.version}-linux-x64.zip";
       # Matches the published SHASUMS256.txt for this release.
       sha256 = "a04a8e95032e13808c6da3a244739edecbdb25e34accc8a8a53db257f225a5c9";
     };
 
-    nativeBuildInputs = [ pkgs.unzip pkgs.autoPatchelfHook ];
+    nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper ];
+    buildInputs = [ pkgs.glib pkgs.gtk3 ];
 
-    buildInputs = electronRuntimeLibs;
-
-    # The zip has no top-level directory.
-    sourceRoot = ".";
-
-    dontConfigure = true;
+    dontUnpack = true;
     dontBuild = true;
 
     installPhase = ''
       runHook preInstall
-      mkdir -p "$out/libexec/electron" "$out/bin"
-      cp -r ./* "$out/libexec/electron/"
-      chmod +x "$out/libexec/electron/electron"
-      ln -s "$out/libexec/electron/electron" "$out/bin/electron"
+      mkdir -p $out/libexec/electron
+      unzip -q -d $out/libexec/electron $src
+      # Shared objects are loaded, never executed; keeping them non-executable
+      # also stops later fixup hooks from treating them as binaries.
+      chmod u-x $out/libexec/electron/*.so*
       runHook postInstall
     '';
 
+    preFixup = ''
+      makeWrapper "$out/libexec/electron/electron" $out/bin/electron
+    '';
+
+    postFixup = ''
+      patchelf \
+        --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+        --set-rpath "${pkgs.lib.makeLibraryPath electronRuntimeLibs}:$out/libexec/electron" \
+        $out/libexec/electron/electron \
+        $out/libexec/electron/chrome_crashpad_handler
+
+      patchelf \
+        --set-rpath "${pkgs.lib.makeLibraryPath [ pkgs.libGL pkgs.pciutils pkgs.vulkan-loader ]}" \
+        $out/libexec/electron/lib*GL*
+
+      rm "$out/libexec/electron/libvulkan.so.1"
+      ln -s -t "$out/libexec/electron" "${pkgs.lib.getLib pkgs.vulkan-loader}/lib/libvulkan.so.1"
+    '';
+
     meta = with pkgs.lib; {
-      description = "Electron ${version} runtime for the Eagle Linux port";
+      description = "Electron ${finalAttrs.version} runtime for the Eagle Linux port";
       platforms = [ "x86_64-linux" ];
       sourceProvenance = with sourceTypes; [ binaryNativeCode ];
       license = licenses.mit;
     };
-  };
+  });
 
   linux = pkgs.stdenv.mkDerivation rec {
     inherit pname version meta;
@@ -333,7 +357,7 @@ EOF
           ]
           ++ (if enableAiSearch then [ aiPythonEnv ] else [])
         )}" \
-        --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath (
+        --prefix LD_LIBRARY_PATH : "/run/opengl-driver/lib:${pkgs.lib.makeLibraryPath (
           electronRuntimeLibs
           ++ (if enableAiSearch then [ aiPythonEnv ] else [])
         )}"
