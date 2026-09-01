@@ -63,6 +63,58 @@ let
     ];
   };
 
+  # Electron runtime, bundled rather than bootstrapped at first launch.
+  #
+  # Eagle used to launch through `npx electron@22.3.7`, which no longer works
+  # on current toolchains: npm >= 12 blocks install scripts via allowScripts,
+  # and on Node >= 26 the extract-zip in Electron's install.js fails silently.
+  # Nixpkgs no longer carries Electron 22 (only 35+), so fetch the upstream
+  # binary release and patchelf it against the runtime libraries.
+  electron22 = pkgs.stdenv.mkDerivation rec {
+    pname = "electron";
+    version = "22.3.7";
+
+    src = pkgs.fetchurl {
+      url = "https://github.com/electron/electron/releases/download/v${version}/electron-v${version}-linux-x64.zip";
+      # Matches the published SHASUMS256.txt for this release.
+      sha256 = "a04a8e95032e13808c6da3a244739edecbdb25e34accc8a8a53db257f225a5c9";
+    };
+
+    nativeBuildInputs = [ pkgs.unzip pkgs.autoPatchelfHook ];
+
+    buildInputs = with pkgs; [
+      alsa-lib at-spi2-atk at-spi2-core atk cairo cups dbus expat
+      fontconfig freetype gdk-pixbuf glib gtk3 libdrm libGL libxkbcommon
+      libnotify libpulseaudio libuuid mesa nspr nss pango stdenv.cc.cc.lib zlib
+      # X11 libraries Electron dlopens at runtime. These live at the top level
+      # in current nixpkgs; the old pkgs.xorg.* aliases are deprecated.
+      libx11 libxcb libxcomposite libxcursor libxdamage libxext libxfixes
+      libxi libxrandr libxrender libxscrnsaver libxshmfence libxtst
+    ];
+
+    # The zip has no top-level directory.
+    sourceRoot = ".";
+
+    dontConfigure = true;
+    dontBuild = true;
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out/libexec/electron" "$out/bin"
+      cp -r ./* "$out/libexec/electron/"
+      chmod +x "$out/libexec/electron/electron"
+      ln -s "$out/libexec/electron/electron" "$out/bin/electron"
+      runHook postInstall
+    '';
+
+    meta = with pkgs.lib; {
+      description = "Electron ${version} runtime for the Eagle Linux port";
+      platforms = [ "x86_64-linux" ];
+      sourceProvenance = with sourceTypes; [ binaryNativeCode ];
+      license = licenses.mit;
+    };
+  };
+
   linux = pkgs.stdenv.mkDerivation rec {
     inherit pname version meta;
 
@@ -249,8 +301,15 @@ EOF
 SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
 EOF
 
-      makeWrapper ${pkgs.nodejs}/bin/npx "$out/bin/eagle" \
-        --add-flags "--yes electron@22.3.7 -r $out/share/eagle/patch.js $out/share/eagle/app --no-sandbox" \
+      # Expose the runtime at the same share/eagle/electron path the Arch,
+      # Fedora and AppImage launchers probe. The Nix wrapper below calls the
+      # store path directly, so this is purely for layout consistency across
+      # packaging targets.
+      mkdir -p "$out/share/eagle/electron"
+      ln -sf ${electron22}/libexec/electron/electron "$out/share/eagle/electron/electron"
+
+      makeWrapper ${electron22}/bin/electron "$out/bin/eagle" \
+        --add-flags "-r $out/share/eagle/patch.js $out/share/eagle/app --no-sandbox" \
         --set GTK_USE_PORTAL "1" \
         --prefix NODE_PATH : "$out/share/eagle/app/node_modules" \
         --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \
@@ -276,6 +335,8 @@ EOF
 
       runHook postInstall
     '';
+
+    passthru = { electron = electron22; };
   };
 
   darwin = pkgs.stdenv.mkDerivation {
