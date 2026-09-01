@@ -992,19 +992,23 @@ def extract_eagle_installer(
     )
 
     try:
-
         decomp = lzma.decompress(
             props +
             b"\xff" * 8 +
             payload,
             format=lzma.FORMAT_ALONE
         )
-
-    except Exception as err:
-
-        raise RuntimeError(
-            f"LZMA decompression failed: {err}"
-        ) from err
+    except Exception as first_err:
+        try:
+            dec = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE, memlimit=2147483648)
+            decomp = dec.decompress(props + b"\xff" * 8 + payload)
+        except Exception:
+            try:
+                decomp = lzma.decompress(props + payload, format=lzma.FORMAT_ALONE)
+            except Exception:
+                raise RuntimeError(
+                    f"LZMA decompression failed: {first_err}"
+                ) from first_err
 
     print(
         f"[+] Decompressed payload size: "
