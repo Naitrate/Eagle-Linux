@@ -502,6 +502,10 @@ if (isMainProcess && electron) {
 
           bar.innerHTML = \`
           <style>
+          body, body[platform=linux], body[platform=win32], body[platform=darwin] {
+            background-color: var(--color-theme, #1f1f1f) !important;
+          }
+
           .eagle-win-btn {
             width: 28px !important;
             height: 28px !important;
