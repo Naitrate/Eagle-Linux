@@ -498,22 +498,42 @@ if (isMainProcess && electron) {
       );
 
       // ======================================================================
-      // Existing main-window injection logic
+      // Existing main-window injection logic & global style injection
       // ======================================================================
 
       if (!win || win.isDestroyed()) return;
 
+      const injectGlobalStyles = () => {
+        try {
+          if (win.isDestroyed() || !win.webContents) return;
+          const globalCssCode = `
+          (function() {
+            if (document.getElementById('eagle-global-style-fix')) return;
+            const style = document.createElement('style');
+            style.id = 'eagle-global-style-fix';
+            style.innerHTML = \`
+              body, body[platform=linux], body[platform=win32], body[platform=darwin] {
+                background-color: var(--color-theme, #1f1f1f) !important;
+              }
+            \`;
+            const target = document.head || document.documentElement || document.body;
+            if (target) target.appendChild(style);
+          })();
+          `;
+          win.webContents.executeJavaScript(globalCssCode).catch(() => {});
+        } catch (e) {}
+      };
+
       const checkAndInject = () => {
+        injectGlobalStyles();
+
         try {
           if (win.isDestroyed()) return;
 
-          const title =
-          win.getTitle ? win.getTitle() : '';
+          const title = win.getTitle ? win.getTitle() : '';
+          const bounds = win.getBounds ? win.getBounds() : {};
 
-          const bounds =
-          win.getBounds ? win.getBounds() : {};
-
-          // Only inject into the large main Eagle window.
+          // Only inject window controls into the large main Eagle window.
           if (title !== 'Eagle') return;
           if (bounds.width <= 700 || bounds.height <= 700) return;
 
@@ -740,29 +760,16 @@ if (OrigBrowserWindow && !OrigBrowserWindow.__wrapped) {
     // The actual Eagle UI is identified by title="Eagle".
     // ----------------------------------------------------------------------
 
-    const isMainWindow = (
-      options.title === 'Eagle' &&
-      width > 700 &&
-      height > 700 &&
-      options.show !== false
-    );
+    const isExplicitlyHidden = (options.show === false);
 
-    const isBackgroundWorker = false;
-
-    if (isMainWindow) {
-      options.show = true;
-      options.skipTaskbar = false;
-    } else {
-      // Keep utility/background windows from being shown during creation.
+    if (isExplicitlyHidden) {
       options.show = false;
       options.skipTaskbar = true;
       options.focusable = false;
-      options.hasShadow = false;
-
-      // Don't use transparent:true here unless Eagle requested it.
-      // Just make the native window invisible.
-      options.backgroundColor =
-        options.backgroundColor || '#00000000';
+    } else {
+      options.show = true;
+      if (options.skipTaskbar === undefined) options.skipTaskbar = false;
+      if (options.focusable === undefined) options.focusable = true;
     }
 
     console.log(
@@ -2173,7 +2180,7 @@ child_process.spawn = function(command, args, options) {
       const { Readable, Writable } = require('stream');
       const { EventEmitter } = require('events');
       const dummyProc = new EventEmitter();
-      const mockGuid = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\n    MachineGuid    REG_SZ    5e83073c-4110-1c59-87c9-ffcdc7b622e8\n';
+      const mockGuid = getMockRegOutput();
       dummyProc.stdout = new Readable({ read() { this.push(mockGuid); this.push(null); } });
       dummyProc.stderr = new Readable({ read() { this.push(null); } });
       dummyProc.stdin = new Writable({ write(chunk, enc, cb) { if (cb) cb(); } });
@@ -2503,7 +2510,36 @@ Module._load = function(request, parent, isMain) {
       return dummyEdgeFunc;
     }
 
-    if (lowerReq.endsWith('.node') || (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) || lowerReq.includes('winreg') || lowerReq.includes('ffi') || lowerReq.includes('ref') || lowerReq.includes('windows-foreground-love') || lowerReq.includes('forcefocus')) {
+    if (lowerReq === 'winreg' || lowerReq.endsWith('/winreg') || lowerReq.endsWith('\\winreg')) {
+      console.log(`[STUBS] Providing FakeWinreg implementation for: ${request}`);
+      class FakeWinreg {
+        constructor(options) {
+          this.hive = options ? options.hive : 'HKLM';
+          this.key = options ? options.key : '';
+        }
+        get(name, cb) {
+          if (typeof cb === 'function') {
+            process.nextTick(() => cb(null, { name: name || 'MachineGuid', type: 'REG_SZ', value: SYSTEM_MACHINE_GUID }));
+          }
+        }
+        values(cb) {
+          if (typeof cb === 'function') {
+            process.nextTick(() => cb(null, [{ name: 'MachineGuid', type: 'REG_SZ', value: SYSTEM_MACHINE_GUID }]));
+          }
+        }
+        keys(cb) {
+          if (typeof cb === 'function') process.nextTick(() => cb(null, []));
+        }
+      }
+      FakeWinreg.HKLM = 'HKLM';
+      FakeWinreg.HKCU = 'HKCU';
+      FakeWinreg.HKCR = 'HKCR';
+      FakeWinreg.HKU = 'HKU';
+      FakeWinreg.HKCC = 'HKCC';
+      return FakeWinreg;
+    }
+
+    if (lowerReq.endsWith('.node') || (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) || lowerReq.includes('ffi') || lowerReq.includes('ref') || lowerReq.includes('windows-foreground-love') || lowerReq.includes('forcefocus')) {
       console.log(`[STUBS] Intercepted native module load before dlopen: ${request}`);
       return createCallableProxy();
     }
