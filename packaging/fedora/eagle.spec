@@ -21,6 +21,17 @@ Eagle helps you collect, search, and organize your design files in one place.
 %prep
 
 %build
+# Ensure extracted_app payload exists (extract if missing, e.g. COPR or mock chroots)
+SRC_DIR="%{_sourcedir}"
+if [ ! -d "${SRC_DIR}/extracted_app" ] || [ ! -f "${SRC_DIR}/extracted_app/run.jsc" ]; then
+    if [ -f "${SRC_DIR}/packaging/ensure-extracted-app.sh" ]; then
+        bash "${SRC_DIR}/packaging/ensure-extracted-app.sh"
+    elif [ -f "${SRC_DIR}/ensure-extracted-app.sh" ]; then
+        bash "${SRC_DIR}/ensure-extracted-app.sh"
+    elif [ -f "$(dirname ${SRC_DIR})/packaging/ensure-extracted-app.sh" ]; then
+        bash "$(dirname ${SRC_DIR})/packaging/ensure-extracted-app.sh"
+    fi
+fi
 
 %install
 rm -rf %{buildroot}
@@ -31,10 +42,30 @@ mkdir -p %{buildroot}/usr/share/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}/usr/share/pixmaps
 mkdir -p %{buildroot}/lib/udev/rules.d
 
-cp -r %{_sourcedir}/extracted_app %{buildroot}/usr/share/eagle/
-cp %{_sourcedir}/stubs.js %{buildroot}/usr/share/eagle/stubs.js
-cp %{_sourcedir}/extracted_app/assets/icon.png %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
-cp %{_sourcedir}/extracted_app/assets/icon.png %{buildroot}/usr/share/pixmaps/eagle.png
+SRC_DIR="%{_sourcedir}"
+EXTRACTED_APP=""
+STUBS_JS=""
+
+if [ -d "${SRC_DIR}/extracted_app" ]; then
+    EXTRACTED_APP="${SRC_DIR}/extracted_app"
+elif [ -d "${SRC_DIR}/../extracted_app" ]; then
+    EXTRACTED_APP="${SRC_DIR}/../extracted_app"
+elif [ -d "$(dirname ${SRC_DIR})/extracted_app" ]; then
+    EXTRACTED_APP="$(dirname ${SRC_DIR})/extracted_app"
+fi
+
+if [ -f "${SRC_DIR}/stubs.js" ]; then
+    STUBS_JS="${SRC_DIR}/stubs.js"
+elif [ -f "${SRC_DIR}/../stubs.js" ]; then
+    STUBS_JS="${SRC_DIR}/../stubs.js"
+elif [ -f "$(dirname ${SRC_DIR})/stubs.js" ]; then
+    STUBS_JS="$(dirname ${SRC_DIR})/stubs.js"
+fi
+
+cp -r "${EXTRACTED_APP}" %{buildroot}/usr/share/eagle/
+cp "${STUBS_JS}" %{buildroot}/usr/share/eagle/stubs.js
+cp "${EXTRACTED_APP}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
+cp "${EXTRACTED_APP}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh
