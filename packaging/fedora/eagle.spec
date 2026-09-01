@@ -93,6 +93,7 @@ cp "${EXTRACTED_APP}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh
 export GTK_USE_PORTAL=1
+export NODE_PATH="/usr/share/eagle/extracted_app/node_modules:${NODE_PATH:-}"
 
 STUBS="/usr/share/eagle/stubs.js"
 APP="/usr/share/eagle/extracted_app"
