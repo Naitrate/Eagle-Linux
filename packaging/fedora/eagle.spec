@@ -48,6 +48,11 @@ if command -v electron >/dev/null 2>&1; then
 elif command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v npx >/dev/null 2>&1; then
+    for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
+        if [ -d "${cache_dir}" ] && [ ! -f "${cache_dir}/path.txt" ]; then
+            rm -rf "${cache_dir%/*/*}" 2>/dev/null || true
+        fi
+    done
     ELECTRON_BIN="npx --yes electron@22.3.7"
 else
     echo "[ERROR] No Electron runtime or nodejs/npx found. Please install nodejs."
