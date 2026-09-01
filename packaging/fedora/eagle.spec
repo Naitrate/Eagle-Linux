@@ -22,15 +22,20 @@ Eagle helps you collect, search, and organize your design files in one place.
 
 %build
 # Ensure extracted_app payload exists (extract if missing, e.g. COPR or mock chroots)
-SRC_DIR="%{_sourcedir}"
-if [ ! -d "${SRC_DIR}/extracted_app" ] || [ ! -f "${SRC_DIR}/extracted_app/run.jsc" ]; then
-    if [ -f "${SRC_DIR}/packaging/ensure-extracted-app.sh" ]; then
-        bash "${SRC_DIR}/packaging/ensure-extracted-app.sh"
-    elif [ -f "${SRC_DIR}/ensure-extracted-app.sh" ]; then
-        bash "${SRC_DIR}/ensure-extracted-app.sh"
-    elif [ -f "$(dirname ${SRC_DIR})/packaging/ensure-extracted-app.sh" ]; then
-        bash "$(dirname ${SRC_DIR})/packaging/ensure-extracted-app.sh"
+SCRIPT=""
+for candidate in \
+    "%{_sourcedir}/packaging/ensure-extracted-app.sh" \
+    "%{_sourcedir}/ensure-extracted-app.sh" \
+    "$(dirname %{_sourcedir})/packaging/ensure-extracted-app.sh" \
+    "$(dirname $(dirname %{_sourcedir}))/packaging/ensure-extracted-app.sh"; do
+    if [ -f "$candidate" ]; then
+        SCRIPT="$candidate"
+        break
     fi
+done
+
+if [ -n "$SCRIPT" ]; then
+    bash "$SCRIPT"
 fi
 
 %install
@@ -42,24 +47,34 @@ mkdir -p %{buildroot}/usr/share/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}/usr/share/pixmaps
 mkdir -p %{buildroot}/lib/udev/rules.d
 
-SRC_DIR="%{_sourcedir}"
 EXTRACTED_APP=""
 STUBS_JS=""
 
-if [ -d "${SRC_DIR}/extracted_app" ]; then
-    EXTRACTED_APP="${SRC_DIR}/extracted_app"
-elif [ -d "${SRC_DIR}/../extracted_app" ]; then
-    EXTRACTED_APP="${SRC_DIR}/../extracted_app"
-elif [ -d "$(dirname ${SRC_DIR})/extracted_app" ]; then
-    EXTRACTED_APP="$(dirname ${SRC_DIR})/extracted_app"
-fi
+for candidate in \
+    "%{_sourcedir}/extracted_app" \
+    "%{_sourcedir}/../extracted_app" \
+    "$(dirname %{_sourcedir})/extracted_app" \
+    "$(dirname $(dirname %{_sourcedir}))/extracted_app"; do
+    if [ -d "$candidate" ] && [ -f "$candidate/run.jsc" ]; then
+        EXTRACTED_APP="$candidate"
+        break
+    fi
+done
 
-if [ -f "${SRC_DIR}/stubs.js" ]; then
-    STUBS_JS="${SRC_DIR}/stubs.js"
-elif [ -f "${SRC_DIR}/../stubs.js" ]; then
-    STUBS_JS="${SRC_DIR}/../stubs.js"
-elif [ -f "$(dirname ${SRC_DIR})/stubs.js" ]; then
-    STUBS_JS="$(dirname ${SRC_DIR})/stubs.js"
+for candidate in \
+    "%{_sourcedir}/stubs.js" \
+    "%{_sourcedir}/../stubs.js" \
+    "$(dirname %{_sourcedir})/stubs.js" \
+    "$(dirname $(dirname %{_sourcedir}))/stubs.js"; do
+    if [ -f "$candidate" ]; then
+        STUBS_JS="$candidate"
+        break
+    fi
+done
+
+if [ -z "$EXTRACTED_APP" ] || [ -z "$STUBS_JS" ]; then
+    echo "[ERROR] Could not locate extracted_app/ or stubs.js"
+    exit 1
 fi
 
 cp -r "${EXTRACTED_APP}" %{buildroot}/usr/share/eagle/
