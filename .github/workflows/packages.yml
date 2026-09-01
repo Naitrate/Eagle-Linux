@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-packages:
+  build-appimage:
+    name: Build AppImage Package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,26 +17,54 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm flatpak flatpak-builder ostree python3 libfuse2t64 || sudo apt-get install -y libfuse2
-
-      - name: Setup Flatpak Flathub Runtimes
-        run: |
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub org.freedesktop.Sdk//23.08 org.freedesktop.Platform//23.08 org.electronjs.Electron2.BaseApp//23.08
+          sudo apt-get install -y python3 libfuse2t64 || sudo apt-get install -y libfuse2
 
       - name: Extract Upstream Eagle Payload
-        run: |
-          bash ./packaging/ensure-extracted-app.sh
+        run: bash ./packaging/ensure-extracted-app.sh
 
       - name: Build AppImage Package
+        run: bash ./packaging/appimage/build-appimage.sh
+
+      - name: Upload AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-package
+          path: build/*.AppImage
+
+  build-rpm:
+    name: Build Fedora RPM Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
         run: |
-          bash ./packaging/appimage/build-appimage.sh
+          sudo apt-get update
+          sudo apt-get install -y rpm python3
+
+      - name: Extract Upstream Eagle Payload
+        run: bash ./packaging/ensure-extracted-app.sh
 
       - name: Build Fedora RPM Package
         run: |
           bash ./packaging/fedora/build-rpm.sh
           mkdir -p build
           find build/rpm/RPMS -name "*.rpm" -exec cp {} build/ \; 2>/dev/null || true
+
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-package
+          path: build/*.rpm
+
+  build-arch:
+    name: Build Arch Linux Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract Upstream Eagle Payload
+        run: bash ./packaging/ensure-extracted-app.sh
 
       - name: Build Arch Linux Package via Docker
         run: |
@@ -48,27 +77,57 @@ jobs:
           mkdir -p build
           find packaging/arch -name "*.pkg.tar.zst" -exec cp {} build/ \; 2>/dev/null || true
 
-      - name: Build Flatpak Bundle Package
-        run: |
-          bash ./packaging/flatpak/build-flatpak.sh
-
-      - name: Upload Built Packages Artifacts
+      - name: Upload Arch Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: eagle-distro-packages
-          path: |
-            build/*.AppImage
-            build/*.rpm
-            build/*.pkg.tar.zst
-            build/*.flatpak
+          name: arch-package
+          path: build/*.pkg.tar.zst
 
-      - name: Publish GitHub Release (On Release Tag)
+  build-flatpak:
+    name: Build Flatpak Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder ostree python3
+
+      - name: Setup Flatpak Flathub Runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Sdk//23.08 org.freedesktop.Platform//23.08 org.electronjs.Electron2.BaseApp//23.08
+
+      - name: Extract Upstream Eagle Payload
+        run: bash ./packaging/ensure-extracted-app.sh
+
+      - name: Build Flatpak Bundle Package
+        run: bash ./packaging/flatpak/build-flatpak.sh
+
+      - name: Upload Flatpak Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-package
+          path: build/*.flatpak
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-appimage, build-rpm, build-arch, build-flatpak]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build-artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/*.AppImage
-            build/*.rpm
-            build/*.pkg.tar.zst
-            build/*.flatpak
+          files: build-artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
