@@ -30,5 +30,38 @@ if [ ! -d "${REPO_DIR}/extracted_app" ] || [ ! -f "${REPO_DIR}/extracted_app/run
         echo "[INFO] Merging extracted_app_patches..."
         cp -r "${REPO_DIR}/extracted_app_patches/." "${REPO_DIR}/extracted_app/"
     fi
-    echo "=== [SUCCESS] extracted_app/ extracted successfully ==="
+
+    echo "[INFO] Normalizing Linux tray icon..."
+    eagle_assets="${REPO_DIR}/extracted_app/assets"
+    if [ -f "${eagle_assets}/icon.png" ]; then
+        if [ -f "${eagle_assets}/icon.ico" ]; then
+            mv "${eagle_assets}/icon.ico" "${eagle_assets}/icon.ico.windows" 2>/dev/null || true
+        fi
+        cp "${eagle_assets}/icon.png" "${eagle_assets}/icon.ico"
+    fi
+
+    echo "[INFO] Creating dummy NiuniuCapture.exe stub..."
+    cat << 'EOF' > "${REPO_DIR}/extracted_app/NiuniuCapture.exe"
+#!/bin/sh
+exit 0
+EOF
+    chmod +x "${REPO_DIR}/extracted_app/NiuniuCapture.exe"
+    if [ -d "${REPO_DIR}/extracted_app/app" ]; then
+        cp "${REPO_DIR}/extracted_app/NiuniuCapture.exe" "${REPO_DIR}/extracted_app/app/NiuniuCapture.exe"
+    fi
+
+    echo "[INFO] Symlinking Linux illustration images..."
+    for theme in dark light; do
+        img_dir="${REPO_DIR}/extracted_app/app/assets/images/${theme}/illustrations"
+        if [ -d "${img_dir}" ]; then
+            for win_img in "${img_dir}"/*-win32.png; do
+                if [ -f "${win_img}" ]; then
+                    linux_img="${win_img%-win32.png}-linux.png"
+                    cp "${win_img}" "${linux_img}" 2>/dev/null || true
+                fi
+            done
+        fi
+    done
+
+    echo "=== [SUCCESS] extracted_app/ extracted & patched successfully ==="
 fi

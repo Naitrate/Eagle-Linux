@@ -78,6 +78,30 @@ Type=Application
 Version=1.5
 EOF
 
+mkdir -p %{buildroot}/usr/share/mime/packages
+cat << 'EOF' > %{buildroot}/usr/share/mime/packages/eagle.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-eaglepack">
+    <comment>Eagle Pack</comment>
+    <glob pattern="*.eaglepack"/>
+    <icon name="application-x-eaglepack"/>
+  </mime-type>
+
+  <mime-type type="application/x-eagleplugin">
+    <comment>Eagle Plugin</comment>
+    <glob pattern="*.eagleplugin"/>
+    <icon name="application-x-eagleplugin"/>
+  </mime-type>
+
+  <mime-type type="application/x-eaglelibrary">
+    <comment>Eagle Library</comment>
+    <glob pattern="*.eagle"/>
+    <icon name="application-x-eaglelibrary"/>
+  </mime-type>
+</mime-info>
+EOF
+
 cat << 'EOF' > %{buildroot}/lib/udev/rules.d/99-eagle-dmi.rules
 SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
 EOF
@@ -88,6 +112,7 @@ EOF
 /usr/share/applications/eagle.desktop
 /usr/share/icons/hicolor/512x512/apps/eagle.png
 /usr/share/pixmaps/eagle.png
+/usr/share/mime/packages/eagle.xml
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
