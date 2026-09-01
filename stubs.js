@@ -328,6 +328,10 @@ if (isMainProcess && electron) {
         }
       } catch (err) {}
     });
+
+    electron.ipcMain.on('images-change', (event, images) => {
+      console.log('[STUBS IPC] images-change received in main process:', Array.isArray(images) ? images.map(i => ({ id: i.id, name: i.name })) : images);
+    });
   }
 
   // Run the suppression check repeatedly during startup
@@ -407,6 +411,32 @@ if (isMainProcess && electron) {
       // ----------------------------------------------------------------------
 
       if (win.webContents) {
+        try {
+          if (win.webContents.setBackgroundThrottling) {
+            win.webContents.setBackgroundThrottling(false);
+          }
+        } catch (e) {}
+
+        win.webContents.on('ipc-message', (event, channel, ...args) => {
+          if (channel === 'images-change' || channel.includes('image') || channel.includes('rename') || channel.includes('change')) {
+            console.log(`[STUBS IPC-MESSAGE win ${win.id} (${channel})]:`, JSON.stringify(args));
+          }
+        });
+
+        win.webContents.on('before-input-event', (event, input) => {
+          if (input.type === 'keyDown') {
+            if (
+              input.key === 'F12' ||
+              (input.control && input.shift && (input.key === 'I' || input.key === 'i')) ||
+              (input.meta && input.alt && (input.key === 'I' || input.key === 'i'))
+            ) {
+              console.log(`[STUBS DEVTOOLS] Toggling DevTools for window ${win.id}`);
+              try {
+                win.webContents.toggleDevTools();
+              } catch (e) {}
+            }
+          }
+        });
 
         win.webContents.on(
           'did-start-loading',
@@ -508,16 +538,53 @@ if (isMainProcess && electron) {
           if (win.isDestroyed() || !win.webContents) return;
           const globalCssCode = `
           (function() {
-            if (document.getElementById('eagle-global-style-fix')) return;
-            const style = document.createElement('style');
-            style.id = 'eagle-global-style-fix';
-            style.innerHTML = \`
-              body, body[platform=linux], body[platform=win32], body[platform=darwin] {
-                background-color: var(--color-theme, #1f1f1f) !important;
-              }
-            \`;
-            const target = document.head || document.documentElement || document.body;
-            if (target) target.appendChild(style);
+            if (!document.getElementById('eagle-global-style-fix')) {
+              const style = document.createElement('style');
+              style.id = 'eagle-global-style-fix';
+              style.innerHTML = \`
+                body, body[platform=linux], body[platform=win32], body[platform=darwin] {
+                  background-color: var(--color-theme, #1f1f1f) !important;
+                }
+              \`;
+              const target = document.head || document.documentElement || document.body;
+              if (target) target.appendChild(style);
+            }
+
+            if (!window.__eagleContentEditablePolyfillInjected) {
+              window.__eagleContentEditablePolyfillInjected = true;
+
+              document.addEventListener('focusin', function(e) {
+                const target = e.target;
+                if (target && target.getAttribute && target.getAttribute('contenteditable') === 'plaintext-only') {
+                  target.setAttribute('contenteditable', 'true');
+                  target.style.webkitUserModify = 'read-write-plaintext-only';
+                }
+              }, true);
+
+              document.addEventListener('input', function(e) {
+                const target = e.target;
+                if (target && target.isContentEditable) {
+                  if (window.angular) {
+                    try {
+                      const $el = window.angular.element(target);
+                      $el.triggerHandler('input');
+                      $el.triggerHandler('change');
+                    } catch (err) {}
+                  }
+                }
+              }, true);
+
+              document.addEventListener('keydown', function(e) {
+                const target = e.target;
+                if (target && target.isContentEditable && e.key === 'Enter') {
+                  if (target.getAttribute('no-line-breaks') === 'true' || target.id === 'inspector-name') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    target.blur();
+                  }
+                }
+              }, true);
+            }
           })();
           `;
           win.webContents.executeJavaScript(globalCssCode).catch(() => {});
@@ -760,7 +827,9 @@ if (OrigBrowserWindow && !OrigBrowserWindow.__wrapped) {
     // The actual Eagle UI is identified by title="Eagle".
     // ----------------------------------------------------------------------
 
-    const isExplicitlyHidden = (options.show === false);
+    options.webPreferences = options.webPreferences || {};
+    options.webPreferences.devTools = true;
+    options.webPreferences.backgroundThrottling = false;
 
     if (isExplicitlyHidden) {
       options.show = false;
@@ -1638,6 +1707,63 @@ fs.readFile = function(p, ...args) {
 fs.writeFileSync = function(p, data, opts) { if (isHostPath(p)) return undefined; return origFs.writeFileSync.call( fs, p, data, opts ); };
 
 fs.writeFile = function(p, ...args) { const cb = args.find(a => typeof a === 'function'); if (isHostPath(p)) { if (cb) process.nextTick(() => cb(null)); return; } return origFs.writeFile.call( fs, p, ...args ); };
+
+// Cross-filesystem / EXDEV fallback for fs.renameSync, fs.rename, and fs.promises.rename
+const origRenameSync = fs.renameSync;
+fs.renameSync = function(oldPath, newPath) {
+  console.log('[STUBS RENAME SYNC]:', oldPath, '->', newPath);
+  try {
+    return origRenameSync.call(fs, oldPath, newPath);
+  } catch (err) {
+    console.log('[STUBS RENAME SYNC ERROR]:', err ? err.message : err);
+    if (err && (err.code === 'EXDEV' || err.code === 'ENOENT')) {
+      try {
+        origFs.copyFileSync.call(fs, oldPath, newPath);
+        origFs.unlinkSync.call(fs, oldPath);
+        return;
+      } catch (e) {}
+    }
+    throw err;
+  }
+};
+
+const origRename = fs.rename;
+fs.rename = function(oldPath, newPath, cb) {
+  console.log('[STUBS RENAME ASYNC]:', oldPath, '->', newPath);
+  return origRename.call(fs, oldPath, newPath, (err) => {
+    if (err) console.log('[STUBS RENAME ASYNC ERROR]:', err.message);
+    if (err && (err.code === 'EXDEV' || err.code === 'ENOENT')) {
+      try {
+        origFs.copyFileSync.call(fs, oldPath, newPath);
+        origFs.unlinkSync.call(fs, oldPath);
+        if (typeof cb === 'function') return cb(null);
+      } catch (e) {
+        if (typeof cb === 'function') return cb(err);
+      }
+    }
+    if (typeof cb === 'function') return cb(err);
+  });
+};
+
+if (fs.promises) {
+  const origPromisesRename = fs.promises.rename;
+  fs.promises.rename = async function(oldPath, newPath) {
+    console.log('[STUBS PROMISES RENAME]:', oldPath, '->', newPath);
+    try {
+      return await origPromisesRename.call(fs.promises, oldPath, newPath);
+    } catch (err) {
+      console.log('[STUBS PROMISES RENAME ERROR]:', err ? err.message : err);
+      if (err && (err.code === 'EXDEV' || err.code === 'ENOENT')) {
+        try {
+          origFs.copyFileSync.call(fs, oldPath, newPath);
+          origFs.unlinkSync.call(fs, oldPath);
+          return;
+        } catch (e) {}
+      }
+      throw err;
+    }
+  };
+}
 
 // Intercept fs.copyFileSync / fs.copyFile for plugin installation
 const origCopyFileSync = fs.copyFileSync;
