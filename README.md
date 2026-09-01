@@ -44,9 +44,24 @@
 | **NixOS (Flakes)**  | `nix run github:Naitrate/Eagle-Linux --impure`                                                           | Run instantly via Nix Flake    |
 | **NixOS (Classic)** | `environment.systemPackages = [ (pkgs.callPackage ./default.nix {}) ];`                                  | System package with udev rules |
 | **AppImage**        | Download `Eagle-4.0.0-x86_64.AppImage` from [Releases](https://github.com/Naitrate/Eagle-Linux/releases) | Universal portable binary      |
-| **Fedora / RHEL**   | `sudo dnf install ./build/eagle-4.0.0-1.x86_64.rpm`                                                      | Native RPM package             |
+| **Fedora / RHEL (COPR)** | `sudo dnf copr enable naitrate/eagle && sudo dnf install eagle`                          | Auto-updating Fedora COPR repo |
+| **Fedora / RHEL (RPM)**  | `sudo dnf install ./build/eagle-4.0.0-1.x86_64.rpm`                                                      | Standalone RPM package         |
 | **Arch / Manjaro**  | `sudo pacman -U ./build/eagle-bin-4.0.0-1-x86_64.pkg.tar.zst`                                            | Native Pacman package          |
 | **Flatpak Bundle**  | `flatpak install build/cool.eagle.Eagle.flatpak`                                                         | Sandboxed Flatpak bundle       |
+
+---
+
+## 🎩 Fedora / RHEL COPR Repository Setup
+
+Add the official Eagle COPR repository for automatic updates on Fedora, RHEL, AlmaLinux, and Rocky Linux:
+
+```bash
+# 1. Enable the Eagle COPR repository
+sudo dnf copr enable naitrate/eagle
+
+# 2. Install Eagle
+sudo dnf install eagle
+```
 
 ---
 
