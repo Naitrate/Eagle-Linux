@@ -259,7 +259,6 @@ EOF
             pkgs.nodejs
             pkgs.coreutils
             pkgs.findutils
-            pkgs.powershell
             pkgs.ffmpeg-full
             (if pkgs ? kstart then pkgs.kstart else pkgs.kdePackages.kstart)
           ]

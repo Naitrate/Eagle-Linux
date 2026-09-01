@@ -6,7 +6,7 @@ pkgdesc="Digital asset manager for designers (Linux Port)"
 arch=('x86_64')
 url="https://eagle.cool"
 license=('custom')
-depends=('electron' 'python' 'zstd' 'xdotool' 'ffmpeg' 'powershell')
+depends=('electron' 'python' 'zstd' 'xdotool' 'ffmpeg')
 provides=('eagle')
 conflicts=('eagle')
 
@@ -25,7 +25,27 @@ package() {
     cat << 'EOF' > "$pkgdir/usr/bin/eagle"
 #!/bin/sh
 export GTK_USE_PORTAL=1
-exec electron -r /usr/share/eagle/stubs.js /usr/share/eagle/extracted_app --no-sandbox "$@"
+
+STUBS="/usr/share/eagle/stubs.js"
+APP="/usr/share/eagle/extracted_app"
+
+if command -v electron >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron)"
+elif command -v electron22 >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron22)"
+elif command -v npx >/dev/null 2>&1; then
+    for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
+        if [ -d "${cache_dir}" ] && [ ! -f "${cache_dir}/path.txt" ]; then
+            rm -rf "${cache_dir%/*/*}" 2>/dev/null || true
+        fi
+    done
+    ELECTRON_BIN="npx --yes electron@22.3.7"
+else
+    echo "[ERROR] No Electron runtime found."
+    exit 1
+fi
+
+exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/eagle"
 

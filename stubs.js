@@ -1958,29 +1958,54 @@ child_process.execFile = function(file, args, options, callback) {
 };
 
 child_process.execSync = function(cmd, opts) {
-  if (isMachineIdQuery(cmd)) {
+  if (isMachineIdQuery(cmd) || (typeof cmd === 'string' && (cmd.includes('HKLM:') || cmd.includes('Cryptography') || cmd.includes('MachineGuid')))) {
     console.log('[STUBS MACHINE ID QUERY (execSync)]:', cmd);
     return getMockRegOutput();
   }
   if (typeof cmd === 'string' && (cmd.includes('powershell') || cmd.includes('powershell.exe'))) {
-    const pwshCmd = cmd.replace(/powershell(\.exe)?/gi, 'pwsh');
-    console.log(`[STUBS POWERSHELL -> PWSH (execSync)]: ${pwshCmd}`);
-    return origExecSync.call(this, pwshCmd, opts);
+    let cleanCmd = cmd
+      .replace(/powershell(\.exe)?/gi, '')
+      .replace(/-NoProfile/gi, '')
+      .replace(/-NonInteractive/gi, '')
+      .replace(/-Command/gi, '')
+      .replace(/Remove-item alias:curl;/gi, '')
+      .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+      .trim();
+    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+      cleanCmd = cleanCmd.slice(1, -1).trim();
+    }
+    console.log(`[STUBS POWERSHELL -> SH (execSync)]: ${cleanCmd}`);
+    try {
+      return origExecSync.call(this, cleanCmd, opts);
+    } catch (err) {
+      console.log(`[STUBS POWERSHELL -> SH FALLBACK (execSync)] Error:`, err.message);
+      return Buffer.from('');
+    }
   }
   return origExecSync.apply(this, arguments);
 };
 
 child_process.exec = function(cmd, opts, cb) {
   if (typeof opts === 'function') { cb = opts; opts = null; }
-  if (isMachineIdQuery(cmd)) {
+  if (isMachineIdQuery(cmd) || (typeof cmd === 'string' && (cmd.includes('HKLM:') || cmd.includes('Cryptography') || cmd.includes('MachineGuid')))) {
     console.log('[STUBS MACHINE ID QUERY (exec)]:', cmd);
     if (cb) cb(null, getMockRegOutput(), '');
     return;
   }
   if (typeof cmd === 'string' && (cmd.includes('powershell') || cmd.includes('powershell.exe'))) {
-    const pwshCmd = cmd.replace(/powershell(\.exe)?/gi, 'pwsh');
-    console.log(`[STUBS POWERSHELL -> PWSH (exec)]: ${pwshCmd}`);
-    return origExec.call(this, pwshCmd, opts, cb);
+    let cleanCmd = cmd
+      .replace(/powershell(\.exe)?/gi, '')
+      .replace(/-NoProfile/gi, '')
+      .replace(/-NonInteractive/gi, '')
+      .replace(/-Command/gi, '')
+      .replace(/Remove-item alias:curl;/gi, '')
+      .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+      .trim();
+    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+      cleanCmd = cleanCmd.slice(1, -1).trim();
+    }
+    console.log(`[STUBS POWERSHELL -> SH (exec)]: ${cleanCmd}`);
+    return origExec.call(this, cleanCmd, opts, cb);
   }
   return origExec.call(this, cmd, opts, cb);
 };
@@ -2018,12 +2043,17 @@ child_process.spawn = function(command, args, options) {
     let cleanCmd = scriptCmd
       .replace(/Remove-item alias:curl;/gi, '')
       .replace(/Remove-Item -ErrorAction SilentlyContinue alias:curl;/gi, '')
+      .replace(/-NoProfile/gi, '')
+      .replace(/-NonInteractive/gi, '')
+      .replace(/-Command/gi, '')
       .trim();
 
-    console.log(`[STUBS POWERSHELL -> FORWARDING TO PWSH]: pwsh -NoProfile -NonInteractive -Command "${cleanCmd}"`);
+    if ((cleanCmd.startsWith('"') && cleanCmd.endsWith('"')) || (cleanCmd.startsWith("'") && cleanCmd.endsWith("'"))) {
+      cleanCmd = cleanCmd.slice(1, -1).trim();
+    }
 
-    const pwshArgs = ['-NoProfile', '-NonInteractive', '-Command', cleanCmd];
-    return origSpawn.call(this, 'pwsh', pwshArgs, options);
+    console.log(`[STUBS POWERSHELL -> SH FORWARDING]: /bin/sh -c "${cleanCmd}"`);
+    return origSpawn.call(this, '/bin/sh', ['-c', cleanCmd], options);
   }
 
   if (typeof command === 'string' && command.includes('cmd.exe')) {
