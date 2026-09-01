@@ -18,7 +18,6 @@ Source1:        extract-installer.py
 Source2:        eagle-unpacked-layout.json
 Source3:        stubs.js
 
-BuildRequires:  bash, curl, python3
 Requires:       nodejs, python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description

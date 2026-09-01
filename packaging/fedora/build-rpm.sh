@@ -17,6 +17,6 @@ cp "${REPO_DIR}/stubs.js" "${BUILD_DIR}/SOURCES/"
 cp -r "${REPO_DIR}/extracted_app" "${BUILD_DIR}/SOURCES/"
 cp "${SCRIPT_DIR}/eagle.spec" "${BUILD_DIR}/SPECS/"
 
-rpmbuild --define "_topdir ${BUILD_DIR}" -bb "${BUILD_DIR}/SPECS/eagle.spec"
+rpmbuild --nodeps --define "_topdir ${BUILD_DIR}" -bb "${BUILD_DIR}/SPECS/eagle.spec"
 
 echo "=== RPM Package Built Successfully in ${BUILD_DIR}/RPMS ==="
