@@ -43,9 +43,7 @@ export GTK_USE_PORTAL=1
 STUBS="/usr/share/eagle/stubs.js"
 APP="/usr/share/eagle/extracted_app"
 
-if command -v electron >/dev/null 2>&1; then
-    ELECTRON_BIN="$(command -v electron)"
-elif command -v electron22 >/dev/null 2>&1; then
+if command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v npx >/dev/null 2>&1; then
     for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
@@ -54,6 +52,8 @@ elif command -v npx >/dev/null 2>&1; then
         fi
     done
     ELECTRON_BIN="npx --yes electron@22.3.7"
+elif command -v electron >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron)"
 else
     echo "[ERROR] No Electron runtime or nodejs/npx found. Please install nodejs."
     exit 1

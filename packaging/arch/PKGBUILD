@@ -6,7 +6,7 @@ pkgdesc="Digital asset manager for designers (Linux Port)"
 arch=('x86_64')
 url="https://eagle.cool"
 license=('custom')
-depends=('electron' 'python' 'zstd' 'xdotool' 'ffmpeg')
+depends=('nodejs' 'python' 'zstd' 'xdotool' 'ffmpeg' 'shared-mime-info')
 provides=('eagle')
 conflicts=('eagle')
 
@@ -29,9 +29,7 @@ export GTK_USE_PORTAL=1
 STUBS="/usr/share/eagle/stubs.js"
 APP="/usr/share/eagle/extracted_app"
 
-if command -v electron >/dev/null 2>&1; then
-    ELECTRON_BIN="$(command -v electron)"
-elif command -v electron22 >/dev/null 2>&1; then
+if command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v npx >/dev/null 2>&1; then
     for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
@@ -40,8 +38,10 @@ elif command -v npx >/dev/null 2>&1; then
         fi
     done
     ELECTRON_BIN="npx --yes electron@22.3.7"
+elif command -v electron >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron)"
 else
-    echo "[ERROR] No Electron runtime found."
+    echo "[ERROR] No Electron runtime found. Please install nodejs."
     exit 1
 fi
 
@@ -72,9 +72,34 @@ Type=Application
 Version=1.5
 EOF
 
-    # Install udev rule for DMI access
-    install -d "$pkgdir/lib/udev/rules.d"
-    cat << 'EOF' > "$pkgdir/lib/udev/rules.d/99-eagle-dmi.rules"
+    # Install MIME type XML definition
+    install -d "$pkgdir/usr/share/mime/packages"
+    cat << 'EOF' > "$pkgdir/usr/share/mime/packages/eagle.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-eaglepack">
+    <comment>Eagle Pack</comment>
+    <glob pattern="*.eaglepack"/>
+    <icon name="application-x-eaglepack"/>
+  </mime-type>
+
+  <mime-type type="application/x-eagleplugin">
+    <comment>Eagle Plugin</comment>
+    <glob pattern="*.eagleplugin"/>
+    <icon name="application-x-eagleplugin"/>
+  </mime-type>
+
+  <mime-type type="application/x-eaglelibrary">
+    <comment>Eagle Library</comment>
+    <glob pattern="*.eagle"/>
+    <icon name="application-x-eaglelibrary"/>
+  </mime-type>
+</mime-info>
+EOF
+
+    # Install udev rule for DMI access (Arch requires /usr/lib/udev/rules.d)
+    install -d "$pkgdir/usr/lib/udev/rules.d"
+    cat << 'EOF' > "$pkgdir/usr/lib/udev/rules.d/99-eagle-dmi.rules"
 SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
 EOF
 }
