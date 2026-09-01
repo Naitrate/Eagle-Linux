@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Eagle Linux Flatpak Repository</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 50px 20px; line-height: 1.6; }
+        h1 { color: #38bdf8; }
+        code { background: #1e293b; padding: 4px 8px; border-radius: 4px; color: #38bdf8; font-family: monospace; }
+        pre { background: #1e293b; padding: 20px; border-radius: 8px; display: inline-block; text-align: left; max-width: 650px; overflow-x: auto; border: 1px solid #334155; }
+        a { color: #38bdf8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Eagle Linux Flatpak Repository</h1>
+    <p>Official static OSTree repository for <a href="https://github.com/Naitrate/Eagle-Linux">Eagle Linux Port</a>.</p>
+    <h2>Installation Instructions</h2>
+    <pre><code># 1. Add the Flatpak repository
+    flatpak remote-add --user --if-not-exists eagle-repo https://naitrate.github.io/Eagle-Linux/eagle.flatpakrepo
+
+    # 2. Install Eagle
+    flatpak install --user eagle-repo cool.eagle.Eagle</code></pre>
+</body>
+</html>
