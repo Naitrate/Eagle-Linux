@@ -1,0 +1,28 @@
+{
+  "name": "jsbi",
+  "version": "2.0.5",
+  "devDependencies": {
+    "eslint": "^5.4.0",
+    "eslint-config-google": "^0.9.1",
+    "rollup": "^0.65.0",
+    "rollup-plugin-babel-minify": "^6.0.0"
+  },
+  "main": "dist/jsbi-cjs.js",
+  "module": "dist/jsbi.mjs",
+  "browser": "dist/jsbi-umd.js",
+  "types": "jsbi.d.ts",
+  "files": [
+    "dist",
+    "jsbi.d.ts"
+  ],
+  "scripts": {
+    "build": "rollup --config rollup.config.mjs",
+    "dev": "rollup --config rollup.config.mjs --watch",
+    "test": "node --no-warnings --experimental-modules tests/tests.mjs; set -e; for file in benchmarks/*.mjs; do node --no-warnings --experimental-modules \"${file}\"; done",
+    "pretest": "npm run build",
+    "prepublish": "npm run ci",
+    "lint": "eslint --fix jsbi.mjs",
+    "generate-benchmarks": "for op in add and div mod mul neg not or sar shl sub xor; do scripts/generate-benchmark.py generate \"${op}\" > \"benchmarks/${op}.mjs\"; done",
+    "ci": "npm run lint && git status && git diff-index --quiet HEAD -- && npm test"
+  }
+}

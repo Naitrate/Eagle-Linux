@@ -1,0 +1,44 @@
+#!/bin/sh
+SELF="$(readlink -f "$0")"
+HERE="${SELF%/*}"
+
+export GTK_USE_PORTAL=1
+
+# Resolve base EAGLE_SHARE directory dynamically across AppImage, Flatpak, and system layouts
+if [ -d "${HERE}/usr/share/eagle" ]; then
+    EAGLE_SHARE="${HERE}/usr/share/eagle"
+elif [ -d "${HERE}/../share/eagle" ]; then
+    EAGLE_SHARE="${HERE}/../share/eagle"
+elif [ -d "/app/share/eagle" ]; then
+    EAGLE_SHARE="/app/share/eagle"
+else
+    EAGLE_SHARE="/usr/share/eagle"
+fi
+
+export NODE_PATH="${EAGLE_SHARE}/extracted_app/node_modules:${NODE_PATH:-}"
+
+STUBS="${EAGLE_SHARE}/stubs.js"
+APP="${EAGLE_SHARE}/extracted_app"
+
+# Locate Electron binary
+if [ -f "/app/electron/electron" ]; then
+    ELECTRON_BIN="/app/electron/electron"
+elif command -v electron22 >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron22)"
+elif command -v electron >/dev/null 2>&1; then
+    ELECTRON_BIN="$(command -v electron)"
+elif command -v npx >/dev/null 2>&1; then
+    ELECTRON_BIN="npx --yes electron@22.3.7"
+else
+    echo "[ERROR] No Electron runtime found. Please install electron or nodejs."
+    exit 1
+fi
+
+echo "[INFO] Launching Eagle with ${ELECTRON_BIN}..."
+echo "[INFO] App directory: ${APP}"
+
+if [ -x "/app/bin/zypak-wrapper" ]; then
+    exec /app/bin/zypak-wrapper "${ELECTRON_BIN}" -r "${STUBS}" "${APP}" --no-sandbox "$@"
+else
+    exec ${ELECTRON_BIN} -r "${STUBS}" "${APP}" --no-sandbox "$@"
+fi

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>cool.eagle.Eagle</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <name>Eagle</name>
+  <summary>Digital asset manager for designers</summary>
+  <description>
+    <p>
+      Eagle is a powerful digital asset management tool that helps designers collect, search, and organize design assets in one place.
+    </p>
+  </description>
+  <homepage>https://eagle.cool</homepage>
+  <launchable type="desktop-id">cool.eagle.Eagle.desktop</launchable>
+  <developer_name>Eagle</developer_name>
+</component>

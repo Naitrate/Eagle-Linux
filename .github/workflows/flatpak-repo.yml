@@ -1,0 +1,88 @@
+name: Publish Flatpak OSTree Repository to GitHub Pages
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '*.*.*'
+  workflow_dispatch:
+
+jobs:
+  publish-flatpak-repo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder ostree python3
+
+      - name: Setup Flatpak Flathub Runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Sdk//23.08 org.freedesktop.Platform//23.08 org.electronjs.Electron2.BaseApp//23.08
+
+      - name: Extract Upstream Eagle Payload
+        run: |
+          bash ./packaging/ensure-extracted-app.sh
+
+      - name: Build Flatpak OSTree Repository
+        run: |
+          rm -rf build/flatpak-repo build/flatpak-build
+          mkdir -p build/flatpak-repo
+          flatpak-builder --force-clean --repo=build/flatpak-repo build/flatpak-build packaging/flatpak/cool.eagle.Eagle.yml
+          
+          # Generate summary index for OSTree repo
+          flatpak build-update-repo build/flatpak-repo
+
+          # Disable Jekyll processing on GitHub Pages so dotfiles & OSTree objects are served
+          touch build/flatpak-repo/.nojekyll
+
+          # Create HTML index page so browser visits render cleanly
+          cat << 'EOF' > build/flatpak-repo/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <title>Eagle Linux Flatpak Repository</title>
+              <style>
+                  body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 50px 20px; line-height: 1.6; }
+                  h1 { color: #38bdf8; }
+                  code { background: #1e293b; padding: 4px 8px; border-radius: 4px; color: #38bdf8; font-family: monospace; }
+                  pre { background: #1e293b; padding: 20px; border-radius: 8px; display: inline-block; text-align: left; max-width: 650px; overflow-x: auto; border: 1px solid #334155; }
+                  a { color: #38bdf8; text-decoration: none; }
+                  a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <h1>Eagle Linux Flatpak Repository</h1>
+              <p>Official static OSTree repository for <a href="https://github.com/Naitrate/Eagle-Linux">Eagle Linux Port</a>.</p>
+              <h2>Installation Instructions</h2>
+              <pre><code># 1. Add the Flatpak repository
+flatpak remote-add --user --if-not-exists eagle-repo https://naitrate.github.io/Eagle-Linux/eagle.flatpakrepo
+
+# 2. Install Eagle
+flatpak install --user eagle-repo cool.eagle.Eagle</code></pre>
+          </body>
+          </html>
+          EOF
+
+          # Generate .flatpakrepo descriptor file with GPGVerify=false for un-signed third-party repos
+          cat << 'EOF' > build/flatpak-repo/eagle.flatpakrepo
+          [Flatpak Repo]
+          Title=Eagle Linux Repository
+          Url=https://naitrate.github.io/Eagle-Linux/
+          Homepage=https://github.com/Naitrate/Eagle-Linux
+          Comment=Official Flatpak repository for Eagle Linux
+          GPGVerify=false
+          EOF
+
+      - name: Deploy OSTree Repository to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/flatpak-repo
+          branch: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}

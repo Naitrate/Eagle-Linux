@@ -1,0 +1,48 @@
+app-id: cool.eagle.Eagle
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+command: eagle
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --share=ipc
+  - --share=network
+  - --device=all
+  - --filesystem=host
+  - --talk-name=org.kde.kglobalaccel
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.Flatpak
+  - --env=GTK_USE_PORTAL=1
+
+modules:
+  - name: electron-binary
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/electron
+      - cp -r . /app/electron/
+      - chmod +x /app/electron/electron
+      - mkdir -p /app/bin
+      - ln -sf /app/electron/electron /app/bin/electron
+    sources:
+      - type: archive
+        url: https://github.com/electron/electron/releases/download/v22.3.7/electron-v22.3.7-linux-x64.zip
+        sha256: a04a8e95032e13808c6da3a244739edecbdb25e34accc8a8a53db257f225a5c9
+
+  - name: eagle
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin /app/share/eagle /app/share/applications /app/share/icons/hicolor/512x512/apps /app/share/pixmaps /app/share/metainfo
+      - cp -r extracted_app /app/share/eagle/
+      - cp stubs.js /app/share/eagle/
+      - install -Dm755 packaging/appimage/AppRun /app/bin/eagle
+      - cp extracted_app/assets/icon.png /app/share/icons/hicolor/512x512/apps/cool.eagle.Eagle.png
+      - cp extracted_app/assets/icon.png /app/share/pixmaps/cool.eagle.Eagle.png
+      - install -Dm644 packaging/flatpak/cool.eagle.Eagle.desktop /app/share/applications/cool.eagle.Eagle.desktop
+      - install -Dm644 packaging/flatpak/cool.eagle.Eagle.metainfo.xml /app/share/metainfo/cool.eagle.Eagle.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..

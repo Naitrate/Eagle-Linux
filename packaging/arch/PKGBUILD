@@ -1,0 +1,60 @@
+# Maintainer: Bryce
+pkgname=eagle-bin
+pkgver=4.0.0
+pkgrel=1
+pkgdesc="Digital asset manager for designers (Linux Port)"
+arch=('x86_64')
+url="https://eagle.cool"
+license=('custom')
+depends=('electron' 'python' 'zstd' 'xdotool' 'ffmpeg' 'powershell')
+provides=('eagle')
+conflicts=('eagle')
+
+package() {
+    # Reference repository root directory relative to PKGBUILD location
+    local REPO_DIR="$(cd "$startdir/../.." && pwd)"
+    bash "$REPO_DIR/packaging/ensure-extracted-app.sh"
+
+    # Install application files
+    install -d "$pkgdir/usr/share/eagle"
+    cp -r "$REPO_DIR/extracted_app" "$pkgdir/usr/share/eagle/"
+    install -Dm644 "$REPO_DIR/stubs.js" "$pkgdir/usr/share/eagle/stubs.js"
+
+    # Install launcher wrapper
+    install -d "$pkgdir/usr/bin"
+    cat << 'EOF' > "$pkgdir/usr/bin/eagle"
+#!/bin/sh
+export GTK_USE_PORTAL=1
+exec electron -r /usr/share/eagle/stubs.js /usr/share/eagle/extracted_app --no-sandbox "$@"
+EOF
+    chmod +x "$pkgdir/usr/bin/eagle"
+
+    # Desktop entry & icons
+    install -d "$pkgdir/usr/share/applications"
+    install -d "$pkgdir/usr/share/icons/hicolor/512x512/apps"
+    install -d "$pkgdir/usr/share/pixmaps"
+
+    install -Dm644 "$REPO_DIR/extracted_app/assets/icon.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/eagle.png"
+    install -Dm644 "$REPO_DIR/extracted_app/assets/icon.png" "$pkgdir/usr/share/pixmaps/eagle.png"
+
+    cat << 'EOF' > "$pkgdir/usr/share/applications/eagle.desktop"
+[Desktop Entry]
+Categories=Graphics;Utility;
+Comment=Digital asset manager for designers
+Exec=eagle %u
+Icon=eagle
+MimeType=application/x-eaglepack;application/x-eagleplugin;application/x-eaglelibrary;x-scheme-handler/eagle;
+Name=Eagle
+StartupNotify=true
+StartupWMClass=Eagle
+Terminal=false
+Type=Application
+Version=1.5
+EOF
+
+    # Install udev rule for DMI access
+    install -d "$pkgdir/lib/udev/rules.d"
+    cat << 'EOF' > "$pkgdir/lib/udev/rules.d/99-eagle-dmi.rules"
+SUBSYSTEM=="dmi", KERNEL=="product_uuid", MODE="0444"
+EOF
+}

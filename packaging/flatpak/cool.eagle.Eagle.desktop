@@ -1,0 +1,12 @@
+[Desktop Entry]
+Categories=Graphics;Utility;
+Comment=Digital asset manager for designers
+Exec=eagle %u
+Icon=cool.eagle.Eagle
+MimeType=application/x-eaglepack;application/x-eagleplugin;application/x-eaglelibrary;x-scheme-handler/eagle;
+Name=Eagle
+StartupNotify=true
+StartupWMClass=Eagle
+Terminal=false
+Type=Application
+Version=1.5

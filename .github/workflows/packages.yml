@@ -1,0 +1,74 @@
+name: Multi-Distro Packages CI & Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm flatpak flatpak-builder ostree python3 libfuse2t64 || sudo apt-get install -y libfuse2
+
+      - name: Setup Flatpak Flathub Runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Sdk//23.08 org.freedesktop.Platform//23.08 org.electronjs.Electron2.BaseApp//23.08
+
+      - name: Extract Upstream Eagle Payload
+        run: |
+          bash ./packaging/ensure-extracted-app.sh
+
+      - name: Build AppImage Package
+        run: |
+          bash ./packaging/appimage/build-appimage.sh
+
+      - name: Build Fedora RPM Package
+        run: |
+          bash ./packaging/fedora/build-rpm.sh
+          mkdir -p build
+          find build/rpm/RPMS -name "*.rpm" -exec cp {} build/ \; 2>/dev/null || true
+
+      - name: Build Arch Linux Package via Docker
+        run: |
+          docker run --rm -v $(pwd):/eagle archlinux:latest bash -c "
+            pacman -Sy --needed --noconfirm base-devel zstd python &&
+            useradd -m builder &&
+            chown -R builder:builder /eagle/packaging/arch &&
+            su builder -c 'cd /eagle/packaging/arch && makepkg -d -f'
+          "
+          mkdir -p build
+          find packaging/arch -name "*.pkg.tar.zst" -exec cp {} build/ \; 2>/dev/null || true
+
+      - name: Build Flatpak Bundle Package
+        run: |
+          bash ./packaging/flatpak/build-flatpak.sh
+
+      - name: Upload Built Packages Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eagle-distro-packages
+          path: |
+            build/*.AppImage
+            build/*.rpm
+            build/*.pkg.tar.zst
+            build/*.flatpak
+
+      - name: Publish GitHub Release (On Release Tag)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.AppImage
+            build/*.rpm
+            build/*.pkg.tar.zst
+            build/*.flatpak
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,40 @@
+# Build Artifacts & Intermediate Packaging Output
+build/
+dist/
+result
+result-*
+
+# Package Files & Bundlers
+*.AppImage
+*.AppDir/
+*.rpm
+*.pkg.tar.zst
+*.pkg.tar.xz
+*.flatpak
+.flatpak-builder/
+*.tar.gz
+*.zip
+*.exe
+*.dmg
+appimagetool
+
+# Arch Linux Build Workspace
+packaging/arch/src/
+packaging/arch/pkg/
+
+# Extracted Payloads & Local Workspaces
+extracted_app/
+extracted_app_mac/
+extracted_app_fresh/
+extracted_app_mac_fresh/
+backup/
+Windows/
+Mac/
+old/
+
+# Developer & Editor Tooling
+.vscode/
+.idea/
+*.log
+scratch/
+notes/

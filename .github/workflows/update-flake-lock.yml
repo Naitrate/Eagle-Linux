@@ -1,0 +1,26 @@
+name: Auto Update Flake Lock
+
+on:
+  schedule:
+    # Run automatically every Monday at midnight (00:00 UTC)
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Allows manual one-click trigger from GitHub Actions tab
+
+jobs:
+  update-flake-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Update flake.lock inputs & open PR
+        uses: DeterminateSystems/update-flake-lock-action@v24
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pr-title: "chore(nix): bump flake.lock inputs"
+          pr-labels: |
+            dependencies
+            automated-pr
