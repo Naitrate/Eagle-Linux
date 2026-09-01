@@ -7,10 +7,10 @@ This file documents the exact configuration required to build the `eagle` RPM pa
 | Field | Value |
 | :--- | :--- |
 | **Type** | Git |
-| **Clone URL** | `https://github.com/Naitrate/Eagle-Linux` |
+| **Clone URL** | `https://github.com/Naitrate/Eagle-Linux.git` |
 | **Committish** | *(leave empty or `master`)* |
-| **Subdirectory** | `.` (or leave empty) |
-| **Spec File** | `packaging/fedora/eagle.spec` |
+| **Subdirectory** | `.` |
+| **Spec File** | `./packaging/fedora/eagle.spec` |
 | **Build Method** | `rpkg` *(or `make srpm`)* |
 
 ## 2. Build Isolation Settings
