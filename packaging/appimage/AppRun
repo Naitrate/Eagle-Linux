@@ -21,13 +21,25 @@ PATCH="${EAGLE_SHARE}/patch.js"
 APP="${EAGLE_SHARE}/app"
 
 # Locate Electron binary
-if [ -f "/app/electron/electron" ]; then
+# Prefer an Electron bundled with this package (AppImage payload first, then
+# the Flatpak location). Bootstrapping via npx is unreliable on current
+# distros -- npm >= 12 blocks install scripts and Node >= 26 breaks Electron's
+# extract-zip -- so it is only a fallback now.
+if [ -x "${EAGLE_SHARE}/electron/electron" ]; then
+    ELECTRON_BIN="${EAGLE_SHARE}/electron/electron"
+elif [ -f "/app/electron/electron" ]; then
     ELECTRON_BIN="/app/electron/electron"
 elif command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v electron >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron)"
 elif command -v npx >/dev/null 2>&1; then
+    # Prime the npx cache before healing it. npm >= 12 blocks postinstall
+    # scripts via its allowScripts policy and --ignore-scripts=false no longer
+    # overrides that, so this first call may leave electron unpacked but
+    # without its binary. The heal loop below then runs install.js directly.
+    # Without priming, a cold cache has nothing to heal and the launch fails.
+    npx --yes --ignore-scripts=false electron@22.3.7 --version >/dev/null 2>&1 || true
     for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
         if [ -d "${cache_dir}" ] && [ ! -f "${cache_dir}/path.txt" ]; then
             if [ -f "${cache_dir}/install.js" ]; then

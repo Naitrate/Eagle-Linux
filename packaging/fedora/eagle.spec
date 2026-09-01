@@ -18,8 +18,8 @@ Source1:        extract-installer.py
 Source2:        eagle-unpacked-layout.json
 Source3:        patch.js
 
-BuildRequires:  python3, curl, bash
-Requires:       nodejs, npm, python3, zstd, xdotool, ffmpeg, dbus-tools
+BuildRequires:  python3, curl, bash, unzip
+Requires:       python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description
 Eagle helps you collect, search, and organize your design files in one place.
@@ -101,6 +101,19 @@ if [ -z "$app" ] || [ -z "$PATCH_JS" ] || [ -z "$PATCHES_DIR" ]; then
 fi
 
 cp -r "${app}" %{buildroot}/usr/share/eagle/
+
+# Bundle the Electron runtime rather than bootstrapping it via npx at first
+# launch (npm >= 12 / Node >= 26 break that path).
+for c in "%{_sourcedir}/packaging/ensure-electron.sh" \
+         "$(dirname %{_sourcedir})/packaging/ensure-electron.sh" \
+         "%{_sourcedir}/ensure-electron.sh"; do
+    if [ -f "$c" ]; then ENSURE_ELECTRON="$c"; break; fi
+done
+if [ -z "${ENSURE_ELECTRON:-}" ]; then
+    echo "[ERROR] Could not locate ensure-electron.sh"
+    exit 1
+fi
+bash "${ENSURE_ELECTRON}" %{buildroot}/usr/share/eagle/electron
 cp "${PATCH_JS}" %{buildroot}/usr/share/eagle/patch.js
 cp -r "${PATCHES_DIR}" %{buildroot}/usr/share/eagle/
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
@@ -114,9 +127,28 @@ export NODE_PATH="/usr/share/eagle/app/node_modules:${NODE_PATH:-}"
 PATCH="/usr/share/eagle/patch.js"
 APP="/usr/share/eagle/app"
 
-if command -v electron22 >/dev/null 2>&1; then
+# Prefer the Electron bundled with this package. Bootstrapping via npx is
+# unreliable on current distros (npm >= 12 blocks install scripts; Node >= 26
+# breaks Electron's extract-zip), so it is only a fallback now.
+ELECTRON_BIN=""
+for candidate in /usr/share/eagle/electron/electron /app/electron/electron; do
+    if [ -x "${candidate}" ]; then
+        ELECTRON_BIN="${candidate}"
+        break
+    fi
+done
+
+if [ -n "${ELECTRON_BIN}" ]; then
+    :
+elif command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v npx >/dev/null 2>&1; then
+    # Prime the npx cache before healing it. npm >= 12 blocks postinstall
+    # scripts via its allowScripts policy and --ignore-scripts=false no longer
+    # overrides that, so this first call may leave electron unpacked but
+    # without its binary. The heal loop below then runs install.js directly.
+    # Without priming, a cold cache has nothing to heal and the launch fails.
+    npx --yes --ignore-scripts=false electron@22.3.7 --version >/dev/null 2>&1 || true
     for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
         if [ -d "${cache_dir}" ] && [ ! -f "${cache_dir}/path.txt" ]; then
             if [ -f "${cache_dir}/install.js" ]; then
@@ -198,6 +230,10 @@ EOF
   producing a package that crashes on launch
 - Restore main-window minimize/maximize/close controls
 - Correct anti-tamper digests for the app_patches XDG screen-capture build
+- Bundle the Electron runtime at build time instead of bootstrapping it via
+  npx at first launch, which fails on npm >= 12 (install scripts blocked by
+  allowScripts) and Node >= 26 (extract-zip silently fails)
+- Drop nodejs and npm from the runtime requirements
 
 * Mon Aug 31 2026 Naitrate <git@naitrate.net> - 4.0.0-1
 - Initial Fedora / RHEL package for Eagle Linux Port

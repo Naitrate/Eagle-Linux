@@ -6,7 +6,8 @@ pkgdesc="Digital asset manager for designers (Linux Port)"
 arch=('x86_64')
 url="https://eagle.cool"
 license=('custom')
-depends=('nodejs' 'npm' 'python' 'zstd' 'xdotool' 'ffmpeg' 'shared-mime-info')
+depends=('python' 'zstd' 'xdotool' 'ffmpeg' 'shared-mime-info')
+makedepends=('curl' 'unzip')
 provides=('eagle')
 conflicts=('eagle')
 
@@ -21,6 +22,10 @@ package() {
     install -Dm644 "$REPO_DIR/patch.js" "$pkgdir/usr/share/eagle/patch.js"
     cp -r "$REPO_DIR/patches" "$pkgdir/usr/share/eagle/"
 
+    # Bundle the Electron runtime rather than bootstrapping it via npx at
+    # first launch (npm >= 12 / Node >= 26 break that path).
+    bash "$REPO_DIR/packaging/ensure-electron.sh" "$pkgdir/usr/share/eagle/electron"
+
     # Install launcher wrapper
     install -d "$pkgdir/usr/bin"
     cat << 'EOF' > "$pkgdir/usr/bin/eagle"
@@ -31,9 +36,28 @@ export NODE_PATH="/usr/share/eagle/app/node_modules:${NODE_PATH:-}"
 PATCH="/usr/share/eagle/patch.js"
 APP="/usr/share/eagle/app"
 
-if command -v electron22 >/dev/null 2>&1; then
+# Prefer the Electron bundled with this package. Bootstrapping via npx is
+# unreliable on current distros (npm >= 12 blocks install scripts; Node >= 26
+# breaks Electron's extract-zip), so it is only a fallback now.
+ELECTRON_BIN=""
+for candidate in /usr/share/eagle/electron/electron /app/electron/electron; do
+    if [ -x "${candidate}" ]; then
+        ELECTRON_BIN="${candidate}"
+        break
+    fi
+done
+
+if [ -n "${ELECTRON_BIN}" ]; then
+    :
+elif command -v electron22 >/dev/null 2>&1; then
     ELECTRON_BIN="$(command -v electron22)"
 elif command -v npx >/dev/null 2>&1; then
+    # Prime the npx cache before healing it. npm >= 12 blocks postinstall
+    # scripts via its allowScripts policy and --ignore-scripts=false no longer
+    # overrides that, so this first call may leave electron unpacked but
+    # without its binary. The heal loop below then runs install.js directly.
+    # Without priming, a cold cache has nothing to heal and the launch fails.
+    npx --yes --ignore-scripts=false electron@22.3.7 --version >/dev/null 2>&1 || true
     for cache_dir in "${HOME}/.npm/_npx/"*/node_modules/electron; do
         if [ -d "${cache_dir}" ] && [ ! -f "${cache_dir}/path.txt" ]; then
             if [ -f "${cache_dir}/install.js" ]; then

@@ -25,6 +25,10 @@ cp -r "${REPO_DIR}/app" "${APPDIR}/usr/share/eagle/"
 cp "${REPO_DIR}/patch.js" "${APPDIR}/usr/share/eagle/"
 cp -r "${REPO_DIR}/patches" "${APPDIR}/usr/share/eagle/"
 
+# Bundle the Electron runtime rather than bootstrapping it via npx at first
+# launch (npm >= 12 / Node >= 26 break that path).
+bash "${REPO_DIR}/packaging/ensure-electron.sh" "${APPDIR}/usr/share/eagle/electron"
+
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 
