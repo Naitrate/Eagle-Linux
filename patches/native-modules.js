@@ -59,13 +59,22 @@ if (Module._extensions['.node']) {
 // and dies in createWindow reading properties of undefined, so the main
 // window never opens. Installs with existing preferences never hit it, which
 // is why it only shows up on a fresh machine.
-const NATIVE_STUB_PACKAGES = /(^|[/\\])(ffi|ffi-napi|ref|ref-napi|ref-struct|ref-array|windows-foreground-love|forcefocus)([/\\]|$)/;
+// Matching on a path *segment* is still too loose. ajv ships
+// node_modules/ajv/lib/dotjs/ref.js -- a pure-JS code generator for JSON
+// Schema $ref -- which Eagle requires as "../dotjs/ref". A segment match
+// stubs it out and quietly breaks schema validation.
+//
+// So only treat these as native packages when the request is the bare
+// package name, or the path actually sits under node_modules/<pkg>/.
+const NATIVE_PKG_NAMES = 'ffi|ffi-napi|ref|ref-napi|ref-struct|ref-array|windows-foreground-love|forcefocus';
+const NATIVE_STUB_EXACT = new RegExp('^(' + NATIVE_PKG_NAMES + ')$');
+const NATIVE_STUB_PATH = new RegExp('(^|[/\\\\])node_modules[/\\\\](' + NATIVE_PKG_NAMES + ')([/\\\\]|$)');
 
 function isNativeStubRequest(lowerReq) {
   if (lowerReq.endsWith('.node')) return true;
   if (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) return true;
-  // strip a trailing .js so "…/ref.js" still matches the ref package
-  return NATIVE_STUB_PACKAGES.test(lowerReq.replace(/\.js$/, ''));
+  const bare = lowerReq.replace(/\.js$/, '');
+  return NATIVE_STUB_EXACT.test(bare) || NATIVE_STUB_PATH.test(bare);
 }
 
 const origResolveFilename = Module._resolveFilename;
