@@ -5,7 +5,7 @@
 
 let
   pname = "eagle";
-  version = "4.0.4";
+  version = "4.0.5";
   appname = "Eagle";
 
   pythonPackages = ps: with ps; [

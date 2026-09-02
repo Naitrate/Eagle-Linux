@@ -86,6 +86,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="4.0.5" date="2026-09-02">
+      <description>
+        <p>
+          Fixes videos and other plugin-backed formats getting stuck on
+          &quot;importing&quot;. Thumbnails for video, HEIC, JXL, RAW, 3D, HDR
+          and vector files now generate instead of hanging.
+        </p>
+      </description>
+    </release>
     <release version="4.0.4" date="2026-09-02">
       <description>
         <p>

@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.4
+Version:        4.0.5
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -253,6 +253,14 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
+* Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.5-1
+- Ship web-capture-preload.js, which upstream keeps at the root of the
+  Windows install rather than inside the app payload. It defines the
+  $$electronIpc global that executeJavaScriptInIsolatedWorld injects code
+  against, so without it every plugin-backed thumbnail (video, heic, jxl,
+  raw, 3d, hdr, vrm, epub, swf, vector) hung until Eagle's 100 second
+  timeout, leaving dragged-in files stuck on "importing"
+
 * Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.4-1
 - Keep the "start hidden" preference when autostart copies the installed
   eagle.desktop: the copy was verbatim, so --hidden was dropped on every
