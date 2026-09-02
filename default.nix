@@ -353,6 +353,11 @@ EOF
             pkgs.coreutils
             pkgs.findutils
             pkgs.ffmpeg-full
+            # The Exif Metadata plugin bundles Windows and macOS builds of
+            # exiv2 only, and picks the macOS one on Linux, where it cannot
+            # execute. Putting exiv2 on PATH lets that binary be replaced with
+            # a wrapper, the same way ffmpeg-full serves the video plugin.
+            pkgs.exiv2
             (if pkgs ? kstart then pkgs.kstart else pkgs.kdePackages.kstart)
           ]
           ++ (if enableAiSearch then [ aiPythonEnv ] else [])

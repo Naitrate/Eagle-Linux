@@ -27,7 +27,7 @@ Source6:        patches.tar.gz
 Source7:        app_patches.tar.gz
 
 BuildRequires:  python3, curl, bash, unzip, patchelf
-Requires:       python3, zstd, xdotool, ffmpeg, dbus-tools
+Requires:       python3, zstd, xdotool, ffmpeg, exiv2, dbus-tools
 
 %description
 Eagle helps you collect, search, and organize your design files in one place.
