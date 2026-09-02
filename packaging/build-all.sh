@@ -44,9 +44,21 @@ fi
 # 4. Build Flatpak bundle (if flatpak-builder is available)
 echo ""
 if [ -f "${SCRIPT_DIR}/flatpak/build-flatpak.sh" ]; then
-    bash "${SCRIPT_DIR}/flatpak/build-flatpak.sh"
+    # build-flatpak.sh fails when flatpak-builder is missing, so that a CI run
+    # cannot pass without producing a bundle. Skipping it here is a local
+    # convenience, and it says so out loud rather than looking like a success.
+    if command -v flatpak-builder >/dev/null 2>&1; then
+        bash "${SCRIPT_DIR}/flatpak/build-flatpak.sh"
+    else
+        echo "*** SKIPPING Flatpak: flatpak-builder is not installed."
+        echo "*** No .flatpak bundle will be in ${BUILD_DIR}."
+        SKIPPED_FLATPAK=1
+    fi
 fi
 
 echo "=================================================="
 echo " All build artifacts available in: ${BUILD_DIR}"
+if [ "${SKIPPED_FLATPAK:-0}" = "1" ]; then
+    echo " NOTE: the Flatpak bundle was skipped (no flatpak-builder)."
+fi
 echo "=================================================="

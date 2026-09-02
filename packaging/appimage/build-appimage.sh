@@ -7,6 +7,18 @@ APPDIR="${REPO_DIR}/build/Eagle.AppDir"
 OUTPUT_DIR="${REPO_DIR}/build"
 APPIMAGETOOL="${REPO_DIR}/build/appimagetool"
 
+# Derive the version rather than hardcoding it. This used to be spelled out in
+# three places, so a release bump could silently ship an AppImage named after
+# the previous version. The spec is the single source of truth; EAGLE_VERSION
+# overrides it for one-off builds.
+VERSION="${EAGLE_VERSION:-$(sed -n 's/^Version:[[:space:]]*//p' "${REPO_DIR}/packaging/fedora/eagle.spec" | head -1)}"
+if [ -z "${VERSION}" ]; then
+    echo "[ERROR] could not read Version from packaging/fedora/eagle.spec" >&2
+    exit 1
+fi
+OUTPUT_FILE="${OUTPUT_DIR}/Eagle-${VERSION}-x86_64.AppImage"
+echo "[INFO] Building version ${VERSION}"
+
 echo "=== Building AppImage Package Structure ==="
 bash "${REPO_DIR}/packaging/ensure-extracted-app.sh"
 
@@ -71,7 +83,12 @@ else
 fi
 
 echo "=== Packaging AppImage Binary ==="
-rm -f "${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage" 2>/dev/null || true
+rm -f "${OUTPUT_FILE}" 2>/dev/null || true
 unset SOURCE_DATE_EPOCH || true
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage"
-echo "=== Success: AppImage created at ${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage ==="
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_FILE}"
+
+if [ ! -s "${OUTPUT_FILE}" ]; then
+    echo "[ERROR] appimagetool exited 0 but ${OUTPUT_FILE} is missing or empty" >&2
+    exit 1
+fi
+echo "=== Success: AppImage created at ${OUTPUT_FILE} ==="
