@@ -31,6 +31,11 @@ modules:
       - type: archive
         url: https://github.com/electron/electron/releases/download/v22.3.7/electron-v22.3.7-linux-x64.zip
         sha256: a04a8e95032e13808c6da3a244739edecbdb25e34accc8a8a53db257f225a5c9
+        # The Electron zip already has its payload at the root, so the default
+        # strip-components of 1 flattens locales/ and resources/ into /app/electron.
+        # Electron then cannot find its locale paks ("locale_file_path.empty()")
+        # and aborts with exit 1 before the app ever loads.
+        strip-components: 0
 
   - name: eagle
     buildsystem: simple
