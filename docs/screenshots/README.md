@@ -64,14 +64,30 @@ Then launch, and capture the window on its own:
 spectacle --activewindow --background --nonotify --output docs/screenshots/01-library.png
 ```
 
-`xdotool` also works while Eagle is running, since Electron 22 uses XWayland:
+Alternatively resize the running window with `kdotool`, which drives KWin
+directly and so works natively on Wayland:
 
 ```bash
-xdotool search --name "^Eagle$" windowsize 1600 1000
+nix-shell -p kdotool --run 'kdotool search --name "^Eagle$" windowsize 1600 1000'
 ```
+
+Anchor the pattern. A bare `--name Eagle` also matches any browser tab whose
+title contains "Eagle" — including eagle.cool itself — and will resize the
+browser instead. `^Eagle$` selects only the application window.
+
+`xdotool` works too, since Electron 22 runs under XWayland, but `kdotool` is
+the better fit on a KDE Wayland session.
 
 Note the window must stay larger than 700x700 or the compatibility layer skips
 injecting the window controls, and the shots will not match a real install.
+
+On a scaled display KWin reports logical geometry, so the captured PNG comes
+out larger than the size requested above — which is fine, more detail is
+better. Check what you actually got:
+
+```bash
+identify -format '%wx%h\n' docs/screenshots/01-library.png
+```
 
 ## Sample content for the demo library
 
