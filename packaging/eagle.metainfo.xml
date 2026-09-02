@@ -54,6 +54,25 @@
 
   <launchable type="desktop-id">eagle.desktop</launchable>
 
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Naitrate/Eagle-Linux/master/docs/screenshots/01-library.png</image>
+      <caption>Browsing a library of images, artwork and design assets</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Naitrate/Eagle-Linux/master/docs/screenshots/02-inspector.png</image>
+      <caption>Inspecting an item's tags, colours and metadata</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Naitrate/Eagle-Linux/master/docs/screenshots/03-search.png</image>
+      <caption>Filtering the library by tag, colour or shape</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Naitrate/Eagle-Linux/master/docs/screenshots/04-preview.png</image>
+      <caption>Previewing a full-resolution image</caption>
+    </screenshot>
+  </screenshots>
+
   <provides>
     <binary>eagle</binary>
   </provides>
