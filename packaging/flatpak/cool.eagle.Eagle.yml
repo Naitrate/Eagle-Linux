@@ -37,6 +37,29 @@ modules:
         # and aborts with exit 1 before the app ever loads.
         strip-components: 0
 
+  # The runtime already provides ffmpeg and ffprobe, but not exiv2, which the
+  # Exif Metadata plugin needs. The rpm, Arch and Nix packages declare exiv2 as
+  # a dependency for the same reason; inside the sandbox it has to be built.
+  # Note this archive has a top-level directory, so the default
+  # strip-components of 1 is correct here, unlike the Electron zip above.
+  - name: exiv2
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DEXIV2_BUILD_SAMPLES=OFF
+      - -DEXIV2_BUILD_UNIT_TESTS=OFF
+      - -DEXIV2_ENABLE_NLS=OFF
+      - -DEXIV2_ENABLE_VIDEO=OFF
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+      - /share/man
+    sources:
+      - type: archive
+        url: https://github.com/Exiv2/exiv2/releases/download/v0.27.7/exiv2-0.27.7-Source.tar.gz
+        sha256: 70629dc27e3d4dd5c3fa91afbea93166d338b1de284e6a4c44bbf9dcfe7bbc6d
+
   - name: eagle
     buildsystem: simple
     build-commands:
