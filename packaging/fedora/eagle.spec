@@ -119,6 +119,16 @@ cp -r "${PATCHES_DIR}" %{buildroot}/usr/share/eagle/
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 
+# AppStream metadata so software centres (Discover, GNOME Software) show the
+# app with a description, categories and release history rather than a bare
+# desktop entry.
+mkdir -p %{buildroot}/usr/share/metainfo
+for c in "%{_sourcedir}/packaging/eagle.metainfo.xml" \
+         "$(dirname %{_sourcedir})/packaging/eagle.metainfo.xml" \
+         "%{_sourcedir}/eagle.metainfo.xml"; do
+    if [ -f "$c" ]; then cp "$c" %{buildroot}/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml; break; fi
+done
+
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh
 export GTK_USE_PORTAL=1
@@ -221,6 +231,7 @@ EOF
 /usr/share/icons/hicolor/512x512/apps/eagle.png
 /usr/share/pixmaps/eagle.png
 /usr/share/mime/packages/eagle.xml
+/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog

@@ -2,6 +2,7 @@ srpm:
 	mkdir -p $(outdir)
 	cp packaging/ensure-extracted-app.sh $(outdir)/
 	cp packaging/ensure-electron.sh $(outdir)/
+	cp packaging/eagle.metainfo.xml $(outdir)/
 	cp extract-installer.py $(outdir)/
 	cp eagle-unpacked-layout.json $(outdir)/
 	cp patch.js $(outdir)/

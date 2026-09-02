@@ -52,7 +52,7 @@
     <name>Eagle</name>
   </developer>
 
-  <launchable type="desktop-id">cool.eagle.Eagle.desktop</launchable>
+  <launchable type="desktop-id">eagle.desktop</launchable>
 
   <provides>
     <binary>eagle</binary>

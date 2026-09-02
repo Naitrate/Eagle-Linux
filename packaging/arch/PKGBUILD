@@ -19,6 +19,10 @@ package() {
     # Install application files
     install -d "$pkgdir/usr/share/eagle"
     cp -r "$REPO_DIR/app" "$pkgdir/usr/share/eagle/"
+    # AppStream metadata for software centres (Discover, GNOME Software)
+    install -Dm644 "$REPO_DIR/packaging/eagle.metainfo.xml" \
+        "$pkgdir/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml"
+
     install -Dm644 "$REPO_DIR/patch.js" "$pkgdir/usr/share/eagle/patch.js"
     cp -r "$REPO_DIR/patches" "$pkgdir/usr/share/eagle/"
 

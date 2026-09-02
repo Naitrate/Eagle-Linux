@@ -12,6 +12,7 @@ mkdir -p "${BUILD_DIR}/"{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 cp "${REPO_DIR}/packaging/ensure-extracted-app.sh" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/packaging/ensure-electron.sh" "${BUILD_DIR}/SOURCES/"
+cp "${REPO_DIR}/packaging/eagle.metainfo.xml" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/extract-installer.py" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/eagle-unpacked-layout.json" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/patch.js" "${BUILD_DIR}/SOURCES/"

@@ -29,6 +29,11 @@ cp -r "${REPO_DIR}/patches" "${APPDIR}/usr/share/eagle/"
 # launch (npm >= 12 / Node >= 26 break that path).
 bash "${REPO_DIR}/packaging/ensure-electron.sh" "${APPDIR}/usr/share/eagle/electron"
 
+# AppStream metadata, so the AppImage carries app info for tools that read it
+mkdir -p "${APPDIR}/usr/share/metainfo"
+cp "${REPO_DIR}/packaging/eagle.metainfo.xml" \
+   "${APPDIR}/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml"
+
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 
