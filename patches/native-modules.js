@@ -49,6 +49,25 @@ if (Module._extensions['.node']) {
   };
 }
 
+// Native modules that must be replaced with a proxy rather than dlopen'd.
+//
+// Match on whole path segments, never on substrings. A bare
+// `request.includes('ref')` also matches Eagle's own
+// app/js/default-preferences.js, and `includes('ffi')` matches pubsuffix --
+// both of which then get replaced by a dummy proxy. That breaks Eagle on a
+// clean profile: it falls back to default-preferences.js, receives the proxy,
+// and dies in createWindow reading properties of undefined, so the main
+// window never opens. Installs with existing preferences never hit it, which
+// is why it only shows up on a fresh machine.
+const NATIVE_STUB_PACKAGES = /(^|[/\\])(ffi|ffi-napi|ref|ref-napi|ref-struct|ref-array|windows-foreground-love|forcefocus)([/\\]|$)/;
+
+function isNativeStubRequest(lowerReq) {
+  if (lowerReq.endsWith('.node')) return true;
+  if (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) return true;
+  // strip a trailing .js so "…/ref.js" still matches the ref package
+  return NATIVE_STUB_PACKAGES.test(lowerReq.replace(/\.js$/, ''));
+}
+
 const origResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, isMain, options) {
   if (typeof request === 'string' && (request.includes('edge_coreclr') || request.includes('edge_nativeclr') || request.includes('electron-edge-js'))) {
@@ -79,7 +98,7 @@ Module._load = function(request, parent, isMain) {
       return FakeWinreg;
     }
 
-    if (lowerReq.endsWith('.node') || (lowerReq.includes('node_modules') && lowerReq.includes('/build/release/')) || lowerReq.includes('ffi') || lowerReq.includes('ref') || lowerReq.includes('windows-foreground-love') || lowerReq.includes('forcefocus')) {
+    if (isNativeStubRequest(lowerReq)) {
       console.log(`[STUBS] Intercepted native module load before dlopen: ${request}`);
       return createCallableProxy();
     }
@@ -142,7 +161,11 @@ Module._load = function(request, parent, isMain) {
   try {
     return originalLoad.apply(this, arguments);
   } catch (err) {
-    if (typeof request === 'string' && (request.endsWith('.node') || request.includes('/build/Release/') || request.includes('winreg') || request.includes('auto-launch') || request.includes('ffi') || request.includes('ref') || request.includes('windows-foreground-love') || request.includes('nsfw'))) {
+    if (typeof request === 'string' && (
+          isNativeStubRequest(request.toLowerCase()) ||
+          request.includes('winreg') ||
+          request.includes('auto-launch') ||
+          request.includes('nsfw'))) {
       console.log(`[STUBS] Intercepted missing/invalid native module: ${request}`);
       return createCallableProxy();
     }
