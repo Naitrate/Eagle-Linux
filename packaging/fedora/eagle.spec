@@ -13,10 +13,17 @@ Summary:        Digital asset manager for designers (Linux Port)
 License:        Proprietary
 URL:            https://eagle.cool
 
+# Everything the build needs must be declared here. An SRPM only carries
+# files listed as SourceN, so anything merely copied into the source
+# directory by .copr/Makefile disappears when COPR rebuilds from the SRPM in
+# a fresh chroot. patches/ is a directory, so it travels as a tarball.
 Source0:        ensure-extracted-app.sh
 Source1:        extract-installer.py
 Source2:        eagle-unpacked-layout.json
 Source3:        patch.js
+Source4:        ensure-electron.sh
+Source5:        eagle.metainfo.xml
+Source6:        patches.tar.gz
 
 BuildRequires:  python3, curl, bash, unzip
 Requires:       python3, zstd, xdotool, ffmpeg, dbus-tools
@@ -70,33 +77,12 @@ for candidate in \
     fi
 done
 
-for candidate in \
-    "%{_sourcedir}/patch.js" \
-    "%{_sourcedir}/../patch.js" \
-    "$(dirname %{_sourcedir})/patch.js" \
-    "$(dirname $(dirname %{_sourcedir}))/patch.js"; do
-    if [ -f "$candidate" ]; then
-        PATCH_JS="$candidate"
-        break
-    fi
-done
-
-for candidate in \
-    "%{_sourcedir}/patches" \
-    "%{_sourcedir}/../patches" \
-    "$(dirname %{_sourcedir})/patches" \
-    "$(dirname $(dirname %{_sourcedir}))/patches"; do
-    if [ -d "$candidate" ]; then
-        PATCHES_DIR="$candidate"
-        break
-    fi
-done
-
-# patch.js is a one-line shim around patches/index.js, so patches/ is just as
-# mandatory -- without it the package installs cleanly and then crashes on
-# launch. Fail the build instead.
-if [ -z "$app" ] || [ -z "$PATCH_JS" ] || [ -z "$PATCHES_DIR" ]; then
-    echo "[ERROR] Could not locate app/, patch.js or patches/"
+# app/ is far too large to travel as a Source, so it is extracted in %build
+# and located here. Everything else comes from a SourceN macro, which rpm
+# guarantees is present whether we build locally or from an SRPM in a clean
+# COPR chroot.
+if [ -z "$app" ]; then
+    echo "[ERROR] Could not locate the extracted app/ payload"
     exit 1
 fi
 
@@ -104,18 +90,19 @@ cp -r "${app}" %{buildroot}/usr/share/eagle/
 
 # Bundle the Electron runtime rather than bootstrapping it via npx at first
 # launch (npm >= 12 / Node >= 26 break that path).
-for c in "%{_sourcedir}/packaging/ensure-electron.sh" \
-         "$(dirname %{_sourcedir})/packaging/ensure-electron.sh" \
-         "%{_sourcedir}/ensure-electron.sh"; do
-    if [ -f "$c" ]; then ENSURE_ELECTRON="$c"; break; fi
-done
-if [ -z "${ENSURE_ELECTRON:-}" ]; then
-    echo "[ERROR] Could not locate ensure-electron.sh"
+bash %{SOURCE4} %{buildroot}/usr/share/eagle/electron
+
+cp %{SOURCE3} %{buildroot}/usr/share/eagle/patch.js
+
+# patch.js is a one-line shim around patches/index.js, so patches/ is just as
+# mandatory -- without it the package installs cleanly and then crashes on
+# launch.
+tar -xzf %{SOURCE6} -C %{buildroot}/usr/share/eagle/
+if [ ! -f %{buildroot}/usr/share/eagle/patches/index.js ]; then
+    echo "[ERROR] patches/ did not unpack from %{SOURCE6}"
     exit 1
 fi
-bash "${ENSURE_ELECTRON}" %{buildroot}/usr/share/eagle/electron
-cp "${PATCH_JS}" %{buildroot}/usr/share/eagle/patch.js
-cp -r "${PATCHES_DIR}" %{buildroot}/usr/share/eagle/
+
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/icons/hicolor/512x512/apps/eagle.png
 cp "${app}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 
@@ -123,11 +110,7 @@ cp "${app}/assets/icon.png" %{buildroot}/usr/share/pixmaps/eagle.png
 # app with a description, categories and release history rather than a bare
 # desktop entry.
 mkdir -p %{buildroot}/usr/share/metainfo
-for c in "%{_sourcedir}/packaging/eagle.metainfo.xml" \
-         "$(dirname %{_sourcedir})/packaging/eagle.metainfo.xml" \
-         "%{_sourcedir}/eagle.metainfo.xml"; do
-    if [ -f "$c" ]; then cp "$c" %{buildroot}/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml; break; fi
-done
+cp %{SOURCE5} %{buildroot}/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml
 
 cat << 'EOF' > %{buildroot}/usr/bin/eagle
 #!/bin/sh

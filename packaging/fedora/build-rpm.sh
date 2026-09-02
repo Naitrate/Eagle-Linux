@@ -16,7 +16,9 @@ cp "${REPO_DIR}/packaging/eagle.metainfo.xml" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/extract-installer.py" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/eagle-unpacked-layout.json" "${BUILD_DIR}/SOURCES/"
 cp "${REPO_DIR}/patch.js" "${BUILD_DIR}/SOURCES/"
-cp -r "${REPO_DIR}/patches" "${BUILD_DIR}/SOURCES/"
+# patches/ is a directory; an SRPM can only carry files declared as SourceN,
+# so it travels as a tarball. Keep this in step with .copr/Makefile.
+tar -czf "${BUILD_DIR}/SOURCES/patches.tar.gz" -C "${REPO_DIR}" patches
 cp -r "${REPO_DIR}/app" "${BUILD_DIR}/SOURCES/"
 cp "${SCRIPT_DIR}/eagle.spec" "${BUILD_DIR}/SPECS/"
 
