@@ -24,8 +24,9 @@ Source3:        patch.js
 Source4:        ensure-electron.sh
 Source5:        eagle.metainfo.xml
 Source6:        patches.tar.gz
+Source7:        app_patches.tar.gz
 
-BuildRequires:  python3, curl, bash, unzip
+BuildRequires:  python3, curl, bash, unzip, patchelf
 Requires:       python3, zstd, xdotool, ffmpeg, dbus-tools
 
 %description
@@ -42,6 +43,19 @@ rebuilds, EPEL is needed as well.
 %build
 # Ensure app payload exists (extract if missing, e.g. COPR or mock chroots)
 SRC_DIR="%{_sourcedir}"
+
+# app_patches carries the Linux-specific overrides -- most importantly the
+# XDG portal screen-capture implementation. ensure-extracted-app.sh overlays
+# it onto the extracted payload, but only if the directory is present, and it
+# is another thing that cannot travel in an SRPM unless declared as a Source.
+# Without this the package builds happily and ships upstream's Windows
+# screen-capture.js, so screenshots silently do not work.
+tar -xzf %{SOURCE7} -C "${SRC_DIR}"
+if [ ! -f "${SRC_DIR}/app_patches/app/js/lib/api/screen-capture.js" ]; then
+    echo "[ERROR] app_patches did not unpack from %{SOURCE7}"
+    exit 1
+fi
+
 if [ ! -d "${SRC_DIR}/app" ] || [ ! -f "${SRC_DIR}/app/run.jsc" ]; then
     SCRIPT=""
     for candidate in \
@@ -93,6 +107,21 @@ if [ -z "$app" ]; then
 fi
 
 cp -r "${app}" %{buildroot}/usr/share/eagle/
+
+# Some bundled .node modules were compiled on NixOS and carry /nix/store
+# paths in their RPATH, which rpm rejects as invalid runpaths and which would
+# be dangling references on any other distribution. Nothing ever loads them:
+# patches/native-modules.js overrides Module._extensions['.node'] and
+# process.dlopen to return a proxy. Strip the stale paths rather than either
+# shipping them or silencing rpm's check.
+if ! command -v patchelf >/dev/null 2>&1; then
+    echo "[ERROR] patchelf is required to strip stale RPATHs from bundled"
+    echo "[ERROR] .node modules. Without it rpm rejects the build with"
+    echo "[ERROR] 'contains an invalid runpath'."
+    exit 1
+fi
+find %{buildroot}/usr/share/eagle/app -name '*.node' -type f -exec \
+    patchelf --remove-rpath {} \;
 
 # Bundle the Electron runtime rather than bootstrapping it via npx at first
 # launch (npm >= 12 / Node >= 26 break that path).

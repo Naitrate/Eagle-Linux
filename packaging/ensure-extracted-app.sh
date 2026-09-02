@@ -35,6 +35,14 @@ if [ ! -d "${REPO_DIR}/app" ] || [ ! -f "${REPO_DIR}/app/run.jsc" ]; then
     if [ -d "${REPO_DIR}/app_patches" ]; then
         echo "[INFO] Merging app_patches..."
         cp -r "${REPO_DIR}/app_patches/." "${REPO_DIR}/app/"
+    else
+        # Skipping this silently produces a package that builds and installs
+        # fine but ships upstream's Windows screen-capture.js, so screenshots
+        # do not work and nothing says why.
+        echo "[ERROR] app_patches/ not found at ${REPO_DIR}/app_patches" >&2
+        echo "[ERROR] The Linux overrides (XDG screen capture, patched bundle)" >&2
+        echo "[ERROR] would be missing from this build. Refusing to continue." >&2
+        exit 1
     fi
 
     echo "[INFO] Normalizing Linux tray icon..."

@@ -19,6 +19,7 @@ cp "${REPO_DIR}/patch.js" "${BUILD_DIR}/SOURCES/"
 # patches/ is a directory; an SRPM can only carry files declared as SourceN,
 # so it travels as a tarball. Keep this in step with .copr/Makefile.
 tar -czf "${BUILD_DIR}/SOURCES/patches.tar.gz" -C "${REPO_DIR}" patches
+tar -czf "${BUILD_DIR}/SOURCES/app_patches.tar.gz" -C "${REPO_DIR}" app_patches
 cp -r "${REPO_DIR}/app" "${BUILD_DIR}/SOURCES/"
 cp "${SCRIPT_DIR}/eagle.spec" "${BUILD_DIR}/SPECS/"
 
