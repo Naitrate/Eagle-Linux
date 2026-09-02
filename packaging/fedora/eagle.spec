@@ -31,6 +31,12 @@ Requires:       python3, zstd, xdotool, ffmpeg, dbus-tools
 %description
 Eagle helps you collect, search, and organize your design files in one place.
 
+This package requires RPM Fusion (free). Eagle depends on ffmpeg for video
+and audio previews, and Fedora ships only ffmpeg-free in its official
+repositories, which omits the codecs Eagle needs. Enable RPM Fusion before
+installing, or dnf cannot satisfy the ffmpeg dependency. On RHEL and its
+rebuilds, EPEL is needed as well.
+
 %prep
 
 %build

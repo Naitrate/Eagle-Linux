@@ -44,8 +44,8 @@
 | **NixOS (Flakes)**  | `nix run github:Naitrate/Eagle-Linux --impure`                                                           | Run instantly via Nix Flake    |
 | **NixOS (Classic)** | `environment.systemPackages = [ (pkgs.callPackage ./default.nix {}) ];`                                  | System package with udev rules |
 | **AppImage**        | Download `Eagle-4.0.3-x86_64.AppImage` from [Releases](https://github.com/Naitrate/Eagle-Linux/releases) | Universal portable binary      |
-| **Fedora / RHEL (COPR)** | `sudo dnf copr enable naitrate/eagle && sudo dnf install eagle`                          | Auto-updating Fedora COPR repo |
-| **Fedora / RHEL (RPM)**  | `sudo dnf install ./build/eagle-4.0.3-1.x86_64.rpm`                                                      | Standalone RPM package         |
+| **Fedora / RHEL (COPR)** | `sudo dnf copr enable naitrate/eagle && sudo dnf install eagle` — [needs RPM Fusion](#-fedora--rhel-copr-repository-setup) | Auto-updating Fedora COPR repo |
+| **Fedora / RHEL (RPM)**  | `sudo dnf install ./build/eagle-4.0.3-1.x86_64.rpm` — [needs RPM Fusion](#-fedora--rhel-copr-repository-setup) | Standalone RPM package         |
 | **Arch / Manjaro**  | `sudo pacman -U ./build/eagle-bin-4.0.3-1-x86_64.pkg.tar.zst`                                            | Native Pacman package          |
 | **Flatpak Bundle**  | `flatpak install build/cool.eagle.Eagle.flatpak`                                                         | Sandboxed Flatpak bundle       |
 
@@ -56,12 +56,24 @@
 Add the official Eagle COPR repository for automatic updates on Fedora, RHEL, AlmaLinux, and Rocky Linux:
 
 ```bash
-# 1. Enable the Eagle COPR repository
+# 1. Enable RPM Fusion (required - see note below)
+sudo dnf install \
+  https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+
+# 2. Enable the Eagle COPR repository
 sudo dnf copr enable naitrate/eagle
 
-# 2. Install Eagle
+# 3. Install Eagle
 sudo dnf install eagle
 ```
+
+> [!IMPORTANT]
+> **RPM Fusion is required on Fedora and RHEL.** Eagle depends on `ffmpeg`
+> for video and audio previews, and Fedora ships only `ffmpeg-free` in its
+> official repositories, which omits the patent-encumbered codecs Eagle
+> needs. Without RPM Fusion enabled, `dnf` cannot satisfy the `ffmpeg`
+> dependency and the install fails. On RHEL, AlmaLinux and Rocky you also
+> need EPEL.
 
 > [!NOTE]
 > For package maintainer documentation on COPR repository setup using `make srpm`, see [`packaging/fedora/COPR.md`](packaging/fedora/COPR.md).
