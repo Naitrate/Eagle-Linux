@@ -73,8 +73,24 @@ fi
 # nothing. That is how the remainingFilenameLength fix stayed out of every
 # clean build while still being present in the local tree.
 if [ -d "${REPO_DIR}/app_patches" ]; then
-    echo "[INFO] Overlaying app_patches..."
-    cp -r "${REPO_DIR}/app_patches/." "${REPO_DIR}/app/"
+    # Only copy when something actually differs. A second invocation often runs
+    # as a different user against a tree it cannot write (the Arch build chowns
+    # only packaging/arch to the makepkg user), and blindly copying there fails
+    # the build even though every override is already in place.
+    needs_overlay=0
+    while IFS= read -r -d '' rel; do
+        if ! cmp -s "${REPO_DIR}/app_patches/${rel}" "${REPO_DIR}/app/${rel}"; then
+            needs_overlay=1
+            break
+        fi
+    done < <(cd "${REPO_DIR}/app_patches" && find . -type f -printf '%P\0')
+
+    if [ "${needs_overlay}" -eq 0 ]; then
+        echo "[INFO] app_patches already applied, nothing to overlay"
+    else
+        echo "[INFO] Overlaying app_patches..."
+        cp -r "${REPO_DIR}/app_patches/." "${REPO_DIR}/app/"
+    fi
 else
     # Skipping this silently produces a package that builds and installs
     # fine but ships upstream's Windows screen-capture.js, so screenshots
