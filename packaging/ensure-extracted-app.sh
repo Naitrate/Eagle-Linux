@@ -32,19 +32,6 @@ if [ ! -d "${REPO_DIR}/app" ] || [ ! -f "${REPO_DIR}/app/run.jsc" ]; then
         rm -rf "${REPO_DIR}/app.asar.unpacked"
     fi
     
-    if [ -d "${REPO_DIR}/app_patches" ]; then
-        echo "[INFO] Merging app_patches..."
-        cp -r "${REPO_DIR}/app_patches/." "${REPO_DIR}/app/"
-    else
-        # Skipping this silently produces a package that builds and installs
-        # fine but ships upstream's Windows screen-capture.js, so screenshots
-        # do not work and nothing says why.
-        echo "[ERROR] app_patches/ not found at ${REPO_DIR}/app_patches" >&2
-        echo "[ERROR] The Linux overrides (XDG screen capture, patched bundle)" >&2
-        echo "[ERROR] would be missing from this build. Refusing to continue." >&2
-        exit 1
-    fi
-
     echo "[INFO] Normalizing Linux tray icon..."
     eagle_assets="${REPO_DIR}/app/assets"
     if [ -f "${eagle_assets}/icon.png" ]; then
@@ -77,5 +64,23 @@ EOF
         fi
     done
 
-    echo "=== [SUCCESS] app/ extracted & patched successfully ==="
+    echo "=== [SUCCESS] app/ extracted successfully ==="
+fi
+
+# Always overlay app_patches, even when app/ was already present. Gating this
+# behind the extraction check meant a newly added override only reached people
+# who happened to extract from scratch; on an incremental build it silently did
+# nothing. That is how the remainingFilenameLength fix stayed out of every
+# clean build while still being present in the local tree.
+if [ -d "${REPO_DIR}/app_patches" ]; then
+    echo "[INFO] Overlaying app_patches..."
+    cp -r "${REPO_DIR}/app_patches/." "${REPO_DIR}/app/"
+else
+    # Skipping this silently produces a package that builds and installs
+    # fine but ships upstream's Windows screen-capture.js, so screenshots
+    # do not work and nothing says why.
+    echo "[ERROR] app_patches/ not found at ${REPO_DIR}/app_patches" >&2
+    echo "[ERROR] The Linux overrides (XDG screen capture, patched bundle)" >&2
+    echo "[ERROR] would be missing from this build. Refusing to continue." >&2
+    exit 1
 fi
