@@ -49,6 +49,15 @@ if [ -n "$SHARE" ]; then
     else
         bad "screen-capture.js is missing the XDG portal patch (app_patches not applied)"
     fi
+    # executeJavaScriptInIsolatedWorld injects code that calls $$electronIpc,
+    # which only exists because this preload defines it. Upstream ships it at
+    # the Windows install root, so it is easy to drop when extracting; without
+    # it every thumbnail plugin hangs until Eagle's 100s timeout.
+    if [ -f "$SHARE/app/web-capture-preload.js" ]; then
+        ok "web-capture-preload.js present (thumbnail plugins can run)"
+    else
+        bad "web-capture-preload.js MISSING - video/heic/raw/3d thumbnails will hang"
+    fi
     # upstream only assigns maxPathLength for win32/darwin, so on Linux the
     # function returns NaN and name.substr(0, NaN) empties every filename
     rfl="$SHARE/app/app/js/utils/remainingFilenameLength.js"
