@@ -6,6 +6,11 @@ on:
       - 'v*'
       - '*.*.*'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a GitHub Release from this run'
+        type: boolean
+        default: false
 
 jobs:
   build-appimage:
@@ -115,7 +120,10 @@ jobs:
     name: Publish GitHub Release
     needs: [build-appimage, build-rpm, build-arch, build-flatpak]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    # Tag pushes still publish automatically. A manual dispatch only publishes
+    # when explicitly asked, so the workflow can be run purely to produce test
+    # artifacts without pushing anything public.
+    if: startsWith(github.ref, 'refs/tags/') || inputs.publish
     steps:
       - uses: actions/checkout@v4
 
