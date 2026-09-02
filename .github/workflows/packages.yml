@@ -17,7 +17,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 libfuse2t64 || sudo apt-get install -y libfuse2
+          sudo apt-get install -y unzip curl python3 libfuse2t64 || sudo apt-get install -y unzip curl python3 libfuse2
 
       - name: Extract Upstream Eagle Payload
         run: bash ./packaging/ensure-extracted-app.sh
@@ -40,7 +40,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm python3
+          sudo apt-get install -y rpm python3 unzip curl
 
       - name: Extract Upstream Eagle Payload
         run: bash ./packaging/ensure-extracted-app.sh
@@ -69,7 +69,7 @@ jobs:
       - name: Build Arch Linux Package via Docker
         run: |
           docker run --rm -v $(pwd):/eagle archlinux:latest bash -c "
-            pacman -Sy --needed --noconfirm base-devel zstd python &&
+            pacman -Sy --needed --noconfirm base-devel zstd python unzip curl &&
             useradd -m builder &&
             chown -R builder:builder /eagle/packaging/arch &&
             su builder -c 'cd /eagle/packaging/arch && makepkg -d -f'
