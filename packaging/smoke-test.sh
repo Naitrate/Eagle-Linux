@@ -14,6 +14,7 @@
 #   * libGL.so.1 not resolvable
 #   * GL initialising without a driver on the library path
 #   * Electron unable to fork its zygote (over-aggressive patchelf)
+#   * remainingFilenameLength() returning NaN, which renames everything to "_"
 #
 set -uo pipefail
 
@@ -47,6 +48,14 @@ if [ -n "$SHARE" ]; then
         ok "XDG screen-capture patch present"
     else
         bad "screen-capture.js is missing the XDG portal patch (app_patches not applied)"
+    fi
+    # upstream only assigns maxPathLength for win32/darwin, so on Linux the
+    # function returns NaN and name.substr(0, NaN) empties every filename
+    rfl="$SHARE/app/app/js/utils/remainingFilenameLength.js"
+    if [ -f "$rfl" ] && ! grep -qE '^[[:space:]]*let maxPathLength;[[:space:]]*$' "$rfl"; then
+        ok "filename-length patch present (item names survive import/rename)"
+    else
+        bad "remainingFilenameLength.js unpatched - every item will be named _"
     fi
     if [ -f "$SHARE/../metainfo/cool.eagle.Eagle.metainfo.xml" ] \
        || [ -f /usr/share/metainfo/cool.eagle.Eagle.metainfo.xml ] \
