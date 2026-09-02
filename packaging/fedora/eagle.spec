@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.2
+Version:        4.0.3
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -218,6 +218,14 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
+* Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.3-1
+- Fix the main window failing to open on a clean install: the native-module
+  interceptor matched substrings, so Eagle's own default-preferences.js was
+  replaced by a stub and createWindow threw
+- Declare patches, ensure-electron.sh and the metainfo as rpm Sources, so
+  they survive a rebuild from the SRPM in a clean COPR chroot
+- Ship AppStream metadata and screenshots for software centres
+
 * Tue Sep 01 2026 Naitrate <git@naitrate.net> - 4.0.2-1
 - Migrate compatibility layer from stubs.js to modular patch.js + patches/
 - Require patches/ at build time; a missing tree now fails instead of

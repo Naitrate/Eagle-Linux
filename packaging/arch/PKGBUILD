@@ -1,6 +1,6 @@
 # Maintainer: Bryce
 pkgname=eagle-bin
-pkgver=4.0.2
+pkgver=4.0.3
 pkgrel=1
 pkgdesc="Digital asset manager for designers (Linux Port)"
 arch=('x86_64')
