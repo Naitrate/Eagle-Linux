@@ -46,6 +46,53 @@ mkdir -p "${APPDIR}/usr/share/metainfo"
 cp "${REPO_DIR}/packaging/eagle.metainfo.xml" \
    "${APPDIR}/usr/share/metainfo/cool.eagle.Eagle.metainfo.xml"
 
+# Bundle the tools Eagle's plugins shell out to. The rpm and Arch packages
+# declare ffmpeg and exiv2 as dependencies, Nix puts them on PATH and the
+# Flatpak builds exiv2 in-sandbox; an AppImage has no dependency mechanism, so
+# they have to travel inside it or video/exif plugins silently fail on any host
+# that happens not to have them.
+TOOLS_LIB="${APPDIR}/usr/lib/eagle-tools"
+mkdir -p "${TOOLS_LIB}"
+
+for tool in ffmpeg ffprobe exiv2; do
+    src="$(command -v "${tool}" 2>/dev/null || true)"
+    if [ -z "${src}" ]; then
+        echo "[ERROR] ${tool} not found on the build host, so it cannot be bundled." >&2
+        echo "[ERROR] Install it (apt install ffmpeg exiv2) and re-run." >&2
+        exit 1
+    fi
+    cp -L "${src}" "${APPDIR}/usr/bin/${tool}"
+    chmod +x "${APPDIR}/usr/bin/${tool}"
+done
+
+# Copy each tool's shared libraries, leaving the core runtime to the host.
+# Mixing a bundled glibc with the host's loader is the classic way to make an
+# AppImage that only runs on the machine that built it.
+for tool in ffmpeg ffprobe exiv2; do
+    ldd "${APPDIR}/usr/bin/${tool}" 2>/dev/null | awk '/=> \//{print $3}' | while read -r lib; do
+        case "${lib##*/}" in
+            libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|librt.so.*|ld-linux*|libresolv.so.*)
+                continue ;;
+        esac
+        [ -f "${TOOLS_LIB}/${lib##*/}" ] || cp -L "${lib}" "${TOOLS_LIB}/" 2>/dev/null || true
+    done
+done
+
+# Point the bundled binaries at the bundled libraries. Doing this with RPATH
+# rather than LD_LIBRARY_PATH keeps the override scoped to these three tools,
+# so Electron still resolves its own libraries from the host.
+if command -v patchelf >/dev/null 2>&1; then
+    for tool in ffmpeg ffprobe exiv2; do
+        patchelf --set-rpath '$ORIGIN/../lib/eagle-tools' "${APPDIR}/usr/bin/${tool}"
+    done
+else
+    echo "[ERROR] patchelf is required to point the bundled tools at their libraries." >&2
+    exit 1
+fi
+
+echo "[INFO] Bundled tools: $(ls "${APPDIR}/usr/bin" | tr '\n' ' ')"
+echo "[INFO] Bundled tool libraries: $(ls "${TOOLS_LIB}" 2>/dev/null | wc -l)"
+
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 

@@ -22,7 +22,10 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y unzip curl python3 libfuse2t64 || sudo apt-get install -y unzip curl python3 libfuse2
+          # ffmpeg, exiv2 and patchelf are needed to bundle the media tools
+          # into the AppDir, not just to build it.
+          sudo apt-get install -y unzip curl python3 ffmpeg exiv2 patchelf libfuse2t64 \
+            || sudo apt-get install -y unzip curl python3 ffmpeg exiv2 patchelf libfuse2
 
       - name: Extract Upstream Eagle Payload
         run: bash ./packaging/ensure-extracted-app.sh

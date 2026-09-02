@@ -17,6 +17,15 @@ fi
 
 export NODE_PATH="${EAGLE_SHARE}/app/node_modules:${NODE_PATH:-}"
 
+# Eagle's video and exif plugins shell out to ffmpeg, ffprobe and exiv2. The
+# AppImage carries its own copies, so put them ahead of the host's: an AppImage
+# is expected to be self-contained, and the plugins fail silently when these
+# are missing. The binaries carry an RPATH into usr/lib/eagle-tools, so nothing
+# is added to LD_LIBRARY_PATH and Electron is unaffected.
+if [ -d "${HERE}/usr/bin" ]; then
+    export PATH="${HERE}/usr/bin:${PATH}"
+fi
+
 PATCH="${EAGLE_SHARE}/patch.js"
 APP="${EAGLE_SHARE}/app"
 

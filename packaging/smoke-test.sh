@@ -78,6 +78,16 @@ else
 fi
 
 echo
+echo "=== media tools (video and exif plugins shell out to these) ==="
+for t in ffmpeg ffprobe exiv2; do
+    if command -v "$t" >/dev/null 2>&1; then
+        ok "$t resolvable ($(command -v "$t"))"
+    else
+        note "$t not on PATH - video/exif plugin thumbnails will fail"
+    fi
+done
+
+echo
 echo "=== launch ==="
 RUN=(timeout 60 $LAUNCH)
 if command -v xvfb-run >/dev/null 2>&1 && [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
