@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.3
+Version:        4.0.4
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -253,7 +253,19 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
+* Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.4-1
+- Keep the "start hidden" preference when autostart copies the installed
+  eagle.desktop: the copy was verbatim, so --hidden was dropped on every
+  rpm, Arch and Nix install
+
 * Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.3-1
+- Stop every imported and renamed item being called "_": upstream's
+  remainingFilenameLength() only sets a maximum for win32 and darwin, so on
+  Linux it returned NaN and name.substr(0, NaN) emptied every filename
+- Fix autostart under Flatpak and AppImage, where the entry pointed at a
+  command that does not exist outside the sandbox or the AppImage mount
+- Re-apply app_patches on incremental builds instead of only on a fresh
+  extraction, so an override cannot go missing from a build
 - Fix the main window failing to open on a clean install: the native-module
   interceptor matched substrings, so Eagle's own default-preferences.js was
   replaced by a stub and createWindow threw

@@ -71,7 +71,7 @@ else
 fi
 
 echo "=== Packaging AppImage Binary ==="
-rm -f "${OUTPUT_DIR}/Eagle-4.0.3-x86_64.AppImage" 2>/dev/null || true
+rm -f "${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage" 2>/dev/null || true
 unset SOURCE_DATE_EPOCH || true
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_DIR}/Eagle-4.0.3-x86_64.AppImage"
-echo "=== Success: AppImage created at ${OUTPUT_DIR}/Eagle-4.0.3-x86_64.AppImage ==="
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL_CMD}" "${APPDIR}" "${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage"
+echo "=== Success: AppImage created at ${OUTPUT_DIR}/Eagle-4.0.4-x86_64.AppImage ==="
