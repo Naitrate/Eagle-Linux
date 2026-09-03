@@ -103,6 +103,37 @@ done
 echo "[INFO] Bundled tools: $(ls "${APPDIR}/usr/bin" | tr '\n' ' ')"
 echo "[INFO] Bundled tool libraries: $(ls "${TOOLS_LIB}" 2>/dev/null | wc -l)"
 
+# Running them here is necessary but not sufficient: the build host has the
+# same libraries installed, so anything missing from the bundle is quietly
+# satisfied from /usr/lib and the run still succeeds. Check where each
+# dependency actually resolves from, which is what catches an incomplete
+# bundle on a machine that cannot notice the difference.
+echo "[INFO] Verifying every dependency resolves from inside the bundle..."
+leaked=0
+for tool in ffmpeg ffprobe exiv2; do
+    while read -r soname _arrow libpath; do
+        [ -n "${libpath}" ] || continue
+        case "${libpath}" in
+            "${APPDIR}"/*) continue ;;      # resolved from the bundle
+        esac
+        case "${soname}" in
+            libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|librt.so.*|libresolv.so.*|*ld-linux*)
+                continue ;;                 # deliberately left to the host
+        esac
+        echo "[ERROR] ${tool}: ${soname} resolves to ${libpath}, outside the bundle" >&2
+        leaked=$((leaked + 1))
+        # LD_LIBRARY_PATH outranks DT_RUNPATH, so a host that sets it would
+        # shadow the bundled libraries and make this check report phantom
+        # leaks. Clear it so we see what the bundle alone resolves.
+    done < <(env -u LD_LIBRARY_PATH ldd "${APPDIR}/usr/bin/${tool}" 2>/dev/null | awk '/=> \//{print $1, $2, $3}')
+done
+if [ "${leaked}" -ne 0 ]; then
+    echo "[ERROR] ${leaked} dependencies would come from the host, so this" >&2
+    echo "[ERROR] AppImage would only work on machines that already have them." >&2
+    exit 1
+fi
+echo "[INFO] All dependencies resolve from the bundle."
+
 # Run them. Bundling something that cannot start is worse than not bundling it,
 # and a linkage problem is invisible until a user drags in a video.
 echo "[INFO] Verifying the bundled tools actually run..."
