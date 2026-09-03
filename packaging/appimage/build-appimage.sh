@@ -81,17 +81,35 @@ done
 # Point the bundled binaries at the bundled libraries. Doing this with RPATH
 # rather than LD_LIBRARY_PATH keeps the override scoped to these three tools,
 # so Electron still resolves its own libraries from the host.
-if command -v patchelf >/dev/null 2>&1; then
-    for tool in ffmpeg ffprobe exiv2; do
-        patchelf --set-rpath '$ORIGIN/../lib/eagle-tools' "${APPDIR}/usr/bin/${tool}"
-    done
-else
+if ! command -v patchelf >/dev/null 2>&1; then
     echo "[ERROR] patchelf is required to point the bundled tools at their libraries." >&2
     exit 1
 fi
 
+for tool in ffmpeg ffprobe exiv2; do
+    patchelf --set-rpath '$ORIGIN/../lib/eagle-tools' "${APPDIR}/usr/bin/${tool}"
+done
+
+# The libraries need a runpath too. patchelf writes DT_RUNPATH, and unlike the
+# older DT_RPATH that is not inherited by a library's own dependencies: ffmpeg
+# would find libavdevice, then libavdevice would fail to find libraw1394 and
+# the binary would die with "cannot open shared object file" despite that
+# library sitting right beside it.
+for lib in "${TOOLS_LIB}"/*.so*; do
+    [ -f "${lib}" ] || continue
+    patchelf --set-rpath '$ORIGIN' "${lib}" 2>/dev/null || true
+done
+
 echo "[INFO] Bundled tools: $(ls "${APPDIR}/usr/bin" | tr '\n' ' ')"
 echo "[INFO] Bundled tool libraries: $(ls "${TOOLS_LIB}" 2>/dev/null | wc -l)"
+
+# Run them. Bundling something that cannot start is worse than not bundling it,
+# and a linkage problem is invisible until a user drags in a video.
+echo "[INFO] Verifying the bundled tools actually run..."
+"${APPDIR}/usr/bin/ffmpeg"  -version >/dev/null 2>&1 || { echo "[ERROR] bundled ffmpeg fails to run"  >&2; "${APPDIR}/usr/bin/ffmpeg"  -version 2>&1 | head -2 >&2; exit 1; }
+"${APPDIR}/usr/bin/ffprobe" -version >/dev/null 2>&1 || { echo "[ERROR] bundled ffprobe fails to run" >&2; "${APPDIR}/usr/bin/ffprobe" -version 2>&1 | head -2 >&2; exit 1; }
+"${APPDIR}/usr/bin/exiv2"  --version >/dev/null 2>&1 || { echo "[ERROR] bundled exiv2 fails to run"   >&2; "${APPDIR}/usr/bin/exiv2"  --version 2>&1 | head -2 >&2; exit 1; }
+echo "[INFO] All three bundled tools run correctly."
 
 cp "${SCRIPT_DIR}/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
