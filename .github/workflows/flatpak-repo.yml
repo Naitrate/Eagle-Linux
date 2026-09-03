@@ -29,14 +29,58 @@ jobs:
         run: |
           bash ./packaging/ensure-extracted-app.sh
 
+      # An unsigned OSTree repo forces everyone installing from it to pass
+      # --no-gpg-verify, which is both awkward and a real downgrade: without a
+      # signature there is nothing tying the objects served over Pages to this
+      # build. The private key is held as a repository secret, so CI can sign
+      # without the key ever living in the tree.
+      - name: Import the repository signing key
+        id: signing
+        env:
+          FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "${FLATPAK_GPG_PRIVATE_KEY:-}" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Unsigned Flatpak repository::FLATPAK_GPG_PRIVATE_KEY is not set. Publishing an unsigned repo; users will have to add it with --no-gpg-verify."
+            exit 0
+          fi
+
+          GNUPGHOME="$(mktemp -d)"
+          chmod 700 "$GNUPGHOME"
+          export GNUPGHOME
+          printf '%s' "${FLATPAK_GPG_PRIVATE_KEY}" | gpg --batch --quiet --import
+
+          KEYID="$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
+          if [ -z "${KEYID}" ]; then
+            echo "::error::FLATPAK_GPG_PRIVATE_KEY was set but no secret key could be imported from it."
+            exit 1
+          fi
+
+          echo "signed=true"              >> "$GITHUB_OUTPUT"
+          echo "keyid=${KEYID}"           >> "$GITHUB_OUTPUT"
+          echo "gnupghome=${GNUPGHOME}"   >> "$GITHUB_OUTPUT"
+          echo "Signing with ${KEYID}"
+
       - name: Build Flatpak OSTree Repository
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+          KEYID: ${{ steps.signing.outputs.keyid }}
+          GNUPGHOME: ${{ steps.signing.outputs.gnupghome }}
         run: |
           rm -rf build/flatpak-repo build/flatpak-build
           mkdir -p build/flatpak-repo
-          flatpak-builder --force-clean --repo=build/flatpak-repo build/flatpak-build packaging/flatpak/cool.eagle.Eagle.yml
-          
-          # Generate summary index for OSTree repo
-          flatpak build-update-repo build/flatpak-repo
+
+          SIGN_ARGS=""
+          if [ "${SIGNED}" = "true" ]; then
+            SIGN_ARGS="--gpg-sign=${KEYID} --gpg-homedir=${GNUPGHOME}"
+          fi
+
+          flatpak-builder --force-clean ${SIGN_ARGS} --repo=build/flatpak-repo build/flatpak-build packaging/flatpak/cool.eagle.Eagle.yml
+
+          # Generate summary index for OSTree repo. The summary has to carry a
+          # signature too, otherwise clients reject the repo even though the
+          # individual commits are signed.
+          flatpak build-update-repo ${SIGN_ARGS} build/flatpak-repo
 
           # Disable Jekyll processing on GitHub Pages so dotfiles & OSTree objects are served
           touch build/flatpak-repo/.nojekyll
@@ -70,15 +114,28 @@ jobs:
           </html>
           EOF
 
-          # Generate .flatpakrepo descriptor file with GPGVerify=false for un-signed third-party repos
+          # The .flatpakrepo descriptor carries the public half of the signing
+          # key, base64 encoded on a single line. That is what lets a client
+          # verify the repo from a plain `flatpak remote-add` with no extra
+          # flags. Without a key we have to keep advertising GPGVerify=false.
           cat << 'EOF' > build/flatpak-repo/eagle.flatpakrepo
           [Flatpak Repo]
           Title=Eagle Linux Repository
           Url=https://naitrate.github.io/Eagle-Linux/
           Homepage=https://github.com/Naitrate/Eagle-Linux
           Comment=Official Flatpak repository for Eagle Linux
-          GPGVerify=false
           EOF
+
+          if [ "${SIGNED}" = "true" ]; then
+            {
+              echo "GPGVerify=true"
+              echo "GPGKey=$(gpg --homedir "${GNUPGHOME}" --export "${KEYID}" | base64 -w0)"
+            } >> build/flatpak-repo/eagle.flatpakrepo
+            echo "[INFO] Published a signed repository."
+          else
+            echo "GPGVerify=false" >> build/flatpak-repo/eagle.flatpakrepo
+            echo "[WARN] Published an UNSIGNED repository."
+          fi
 
       - name: Deploy OSTree Repository to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
