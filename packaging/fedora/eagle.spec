@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.5
+Version:        4.0.6
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -253,6 +253,15 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
+* Thu Sep 03 2026 Naitrate <git@naitrate.net> - 4.0.6-1
+- Declare exiv2 as a runtime dependency. The Exif Metadata plugin ships
+  Windows and macOS builds only and picks the macOS one on Linux, where it
+  cannot execute; having exiv2 present lets that binary be replaced with a
+  wrapper, the same way ffmpeg already serves the video plugin
+- Bring every package to the same footing: the Flatpak builds exiv2 inside
+  the sandbox, and the AppImage now carries ffmpeg, ffprobe and exiv2 with
+  their libraries rather than relying on the host having them
+
 * Wed Sep 02 2026 Naitrate <git@naitrate.net> - 4.0.5-1
 - Ship web-capture-preload.js, which upstream keeps at the root of the
   Windows install rather than inside the app payload. It defines the

@@ -86,6 +86,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="4.0.6" date="2026-09-03">
+      <description>
+        <p>
+          Makes the media tools Eagle relies on available in every package.
+          The AppImage now carries ffmpeg and exiv2 with it instead of
+          expecting the host to provide them.
+        </p>
+      </description>
+    </release>
     <release version="4.0.5" date="2026-09-02">
       <description>
         <p>

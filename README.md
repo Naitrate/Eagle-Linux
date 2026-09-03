@@ -43,10 +43,10 @@
 | **Flatpak Repo**    | `flatpak remote-add --user --if-not-exists eagle-repo https://naitrate.github.io/Eagle-Linux/eagle.flatpakrepo` | Auto-updating Flatpak repo     |
 | **NixOS (Flakes)**  | `nix run github:Naitrate/Eagle-Linux --impure`                                                           | Run instantly via Nix Flake    |
 | **NixOS (Classic)** | `environment.systemPackages = [ (pkgs.callPackage ./default.nix {}) ];`                                  | System package with udev rules |
-| **AppImage**        | Download `Eagle-4.0.5-x86_64.AppImage` from [Releases](https://github.com/Naitrate/Eagle-Linux/releases) | Universal portable binary      |
+| **AppImage**        | Download `Eagle-4.0.6-x86_64.AppImage` from [Releases](https://github.com/Naitrate/Eagle-Linux/releases) | Universal portable binary      |
 | **Fedora / RHEL (COPR)** | `sudo dnf copr enable naitrate/eagle && sudo dnf install eagle` — [needs RPM Fusion](#-fedora--rhel-copr-repository-setup) | Auto-updating Fedora COPR repo |
-| **Fedora / RHEL (RPM)**  | `sudo dnf install ./build/eagle-4.0.5-1.x86_64.rpm` — [needs RPM Fusion](#-fedora--rhel-copr-repository-setup) | Standalone RPM package         |
-| **Arch / Manjaro**  | `sudo pacman -U ./build/eagle-bin-4.0.5-1-x86_64.pkg.tar.zst`                                            | Native Pacman package          |
+| **Fedora / RHEL (RPM)**  | `sudo dnf install ./build/eagle-4.0.6-1.x86_64.rpm` — [needs RPM Fusion](#-fedora--rhel-copr-repository-setup) | Standalone RPM package         |
+| **Arch / Manjaro**  | `sudo pacman -U ./build/eagle-bin-4.0.6-1-x86_64.pkg.tar.zst`                                            | Native Pacman package          |
 | **Flatpak Bundle**  | `flatpak install build/cool.eagle.Eagle.flatpak`                                                         | Sandboxed Flatpak bundle       |
 
 ---
