@@ -342,7 +342,7 @@ EOF
       ln -sf ${electron22}/libexec/electron/electron "$out/share/eagle/electron/electron"
 
       makeWrapper ${electron22}/bin/electron "$out/bin/eagle" \
-        --add-flags "-r $out/share/eagle/patch.js $out/share/eagle/app --no-sandbox" \
+        --add-flags "-r $out/share/eagle/patch.js $out/share/eagle/app --no-sandbox --ozone-platform-hint=auto" \
         --set GTK_USE_PORTAL "1" \
         --prefix NODE_PATH : "$out/share/eagle/app/node_modules" \
         --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}" \

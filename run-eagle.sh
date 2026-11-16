@@ -11,4 +11,5 @@ export GTK_USE_PORTAL=1
 exec npx --yes electron@22.3.7 \
     -r ./patch.js app \
     --no-sandbox \
+    --ozone-platform-hint=auto \
     "$@"

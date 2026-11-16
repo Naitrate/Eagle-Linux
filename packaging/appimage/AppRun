@@ -69,7 +69,7 @@ echo "[INFO] Launching Eagle with ${ELECTRON_BIN}..."
 echo "[INFO] App directory: ${APP}"
 
 if [ -x "/app/bin/zypak-wrapper" ]; then
-    exec /app/bin/zypak-wrapper "${ELECTRON_BIN}" -r "${PATCH}" "${APP}" --no-sandbox "$@"
+    exec /app/bin/zypak-wrapper "${ELECTRON_BIN}" -r "${PATCH}" "${APP}" --no-sandbox --ozone-platform-hint=auto "$@"
 else
-    exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox "$@"
+    exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox --ozone-platform-hint=auto "$@"
 fi
