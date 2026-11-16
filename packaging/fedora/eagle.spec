@@ -195,7 +195,7 @@ else
     exit 1
 fi
 
-exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox "$@"
+exec ${ELECTRON_BIN} -r "${PATCH}" "${APP}" --no-sandbox --ozone-platform-hint=auto "$@"
 EOF
 chmod +x %{buildroot}/usr/bin/eagle
 
