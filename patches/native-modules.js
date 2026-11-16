@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { FakeWinreg } = require('./machine-id');
+const { isWinClipboardRequest, linuxWinClipboard } = require('./file-clipboard');
 const {
   autostartFile,
   possibleDesktopFiles,
@@ -89,6 +90,11 @@ const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
   if (typeof request === 'string') {
     const lowerReq = request.toLowerCase();
+    if (isWinClipboardRequest(request)) {
+      console.log(`[STUBS] Providing Linux file clipboard for: ${request}`);
+      return linuxWinClipboard;
+    }
+
     if (lowerReq.includes('electron-edge-js') || lowerReq.includes('edge') || lowerReq.includes('edge_coreclr') || lowerReq === 'edge_coreclr.node') {
       console.log(`[STUBS] Intercepted edge module load: ${request}`);
       const dummyEdgeFunc = function() {

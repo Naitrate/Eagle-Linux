@@ -27,6 +27,8 @@ const eagleTrayIconPng = path.join(
   'icon.png'
 );
 
+const eagleTrayName = 'Eagle';
+
 console.log(
   `[STUBS ICON] Linux tray icon: ${eagleTrayIconPng}, ` +
   `exists=${fs.existsSync(eagleTrayIconPng)}`
@@ -357,6 +359,59 @@ if (
 
   electron.Tray =
     CustomTray;
+}
+
+// ==========================================================================
+// Tray name
+//
+// Electron's StatusNotifierItem always publishes an empty Title, so Plasma's
+// "Status and Notifications" list falls back to the tooltip title. Eagle
+// never sets a tooltip (the Windows tray does not need one), which left the
+// entry with an icon and no name.
+//
+// electron.Tray is a non-configurable getter, so the CustomTray assignment
+// above cannot take effect, and Tray methods such as setToolTip() are own
+// properties of each instance. on()/once() are inherited, though, and Eagle
+// registers its click handlers right after creating the tray: name the
+// instance the first time a listener is attached.
+// ==========================================================================
+
+function nameTray(tray) {
+  if (tray.__eagleLinuxNamed || typeof tray.setToolTip !== 'function') {
+    return;
+  }
+  tray.__eagleLinuxNamed = true;
+
+  const originalSetToolTip = tray.setToolTip;
+  tray.setToolTip = function(toolTip) {
+    return originalSetToolTip.call(this, toolTip || eagleTrayName);
+  };
+
+  try {
+    tray.setToolTip(eagleTrayName);
+  } catch (err) {
+    console.error('[STUBS TRAY] setToolTip failed:', err);
+  }
+}
+
+const TrayPrototype = OrigTray && OrigTray.prototype;
+
+if (TrayPrototype && !TrayPrototype.__eagleLinuxNameHooked) {
+  for (const method of ['on', 'once', 'addListener', 'prependListener']) {
+    const inherited = TrayPrototype[method];
+    if (typeof inherited !== 'function') continue;
+
+    Object.defineProperty(TrayPrototype, method, {
+      value: function(...args) {
+        nameTray(this);
+        return inherited.apply(this, args);
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  TrayPrototype.__eagleLinuxNameHooked = true;
 }
 
 module.exports = {

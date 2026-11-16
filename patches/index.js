@@ -36,10 +36,13 @@ const nativeModules = require('./native-modules');
 // 8. UI & Window management
 const windowManager = require('./window-manager');
 
-// 9. Renderer-only fixes (no-op in the main process)
+// 9. Native drag-out: normalise webContents.startDrag() calls
+const dragOut = require('./drag-out');
+
+// 10. Renderer-only fixes (no-op in the main process)
 const rendererFixes = require('./renderer-fixes');
 
-// 10. Dynamically-installed plugin patches & desktop integration
+// 11. Dynamically-installed plugin patches & desktop integration
 const aiSearch = require('./ai-search');
 const kdeShortcuts = require('./kde-shortcuts');
 
@@ -61,6 +64,7 @@ module.exports = {
   processExecution,
   nativeModules,
   windowManager,
+  dragOut,
   rendererFixes,
   aiSearch,
   kdeShortcuts
