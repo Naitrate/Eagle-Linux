@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write # creating the PR labels the first time
 
 jobs:
   update-flake-lock:
@@ -28,3 +29,29 @@ jobs:
           pr-labels: |
             dependencies
             automated-pr
+
+      # PRs opened with GITHUB_TOKEN do not trigger other workflows, and the
+      # Nix build otherwise only runs on release tags. Build the bump here so
+      # a lock update that breaks Eagle fails this job instead of waiting
+      # silently for the next release.
+      - name: Build Eagle with the updated lock
+        id: build
+        run: |
+          if ! git ls-remote --exit-code --heads origin update_flake_lock_action >/dev/null; then
+            echo "No flake.lock update branch; nothing to build."
+            exit 0
+          fi
+          git fetch --depth=1 origin update_flake_lock_action
+          git checkout --detach FETCH_HEAD
+          nix build .#default --impure -L
+
+      - name: Flag the update PR when the build fails
+        if: failure() && steps.build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head update_flake_lock_action --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" \
+              --body "Eagle does not build with this flake.lock update: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Do not merge until it is fixed."
+          fi
