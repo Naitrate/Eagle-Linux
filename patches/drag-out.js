@@ -90,9 +90,107 @@ function wrapStartDrag(webContents) {
   webContents.__eagleLinuxDragWrapped = true;
 }
 
+// --------------------------------------------------------------------------
+// Wayland: drag items out as an HTML5 drag instead
+//
+// On Wayland, Electron 22's startDrag() offers text/uri-list but writes zero
+// bytes when the drop target reads it, so file managers accept the drop and
+// copy nothing. An ordinary HTML5 drag carrying text/uri-list transfers
+// fine. On Wayland, let the browser drag Eagle starts go ahead (Eagle
+// cancels it in favour of startDrag), give it the selected files' URIs,
+// and swallow Eagle's 'ondragstart' request for that drag.
+//
+// Only text/uri-list is set: Eagle's own drop handlers treat a URL in
+// text/plain, or an <img> in text/html, as a web image to import, and use
+// their global `dragging` flag to recognise internal drags (onto folders,
+// tags, the trash), which keeps working.
+// --------------------------------------------------------------------------
+
+const htmlDragScript = `
+(function() {
+  if (window.__eagleLinuxHtmlDrag || typeof window.onDragStartContainer !== 'function') {
+    return !!window.__eagleLinuxHtmlDrag;
+  }
+  const { ipcRenderer } = require('electron');
+  const { pathToFileURL } = require('url');
+
+  let swallowDragStart = false;
+  const originalSend = ipcRenderer.send;
+  ipcRenderer.send = function(channel, ...args) {
+    if (channel === 'ondragstart' && swallowDragStart) {
+      swallowDragStart = false;
+      return;
+    }
+    return originalSend.call(this, channel, ...args);
+  };
+
+  function draggedFileUris(event) {
+    const scope = angular.element('body').scope();
+    if (!scope || !scope.imagesDir) return [];
+    const box = jQuery('.box').has(event.target)[0];
+    const target = (box && scope.getItemByElement(box)) || scope.selected[0];
+    const items = scope.selected && scope.selected.length ? scope.selected : [target];
+    const imagesDir = decodeURIComponent(scope.imagesDir);
+    return items
+      .filter(item => item && item.id && item.name && item.ext)
+      .map(item => pathToFileURL(
+        imagesDir + item.id + '.info/' + item.name + '.' + item.ext).href);
+  }
+
+  const originalDragStart = window.onDragStartContainer;
+  window.onDragStartContainer = function(event) {
+    const dt = event && event.dataTransfer;
+    let uris = [];
+    try { uris = dt ? draggedFileUris(event) : []; } catch (e) {}
+    if (uris.length === 0) return originalDragStart.apply(this, arguments);
+
+    // Eagle cancels the browser drag first thing; keep it alive.
+    event.preventDefault = function() {};
+    const result = originalDragStart.apply(this, arguments);
+    dt.clearData();
+    dt.setData('text/uri-list', uris.join('\\r\\n') + '\\r\\n');
+    // Copy only: a "move" drop would take the file out of the library.
+    dt.effectAllowed = 'copy';
+    swallowDragStart = true;
+    console.log('[STUBS DRAG] HTML5 drag-out', uris);
+    return result;
+  };
+
+  window.__eagleLinuxHtmlDrag = true;
+  return true;
+})();
+`;
+
+function installHtmlDrag(webContents) {
+  // onDragStartContainer may not exist yet at dom-ready/did-finish-load,
+  // so keep trying for a while after each load.
+  let retryTimer = null;
+  const inject = (attempt = 0) => {
+    clearTimeout(retryTimer);
+    if (webContents.isDestroyed()) return;
+    const url = webContents.getURL() || '';
+    if (!/\/app\/index\.html(\?|#|$)/.test(url)) return;
+    webContents.executeJavaScript(htmlDragScript)
+      .then(installed => {
+        if (installed) {
+          console.log('[STUBS DRAG] HTML5 drag-out installed');
+        } else if (attempt < 60) {
+          retryTimer = setTimeout(() => inject(attempt + 1), 500);
+        } else {
+          console.log('[STUBS DRAG] HTML5 drag-out not installed: onDragStartContainer missing');
+        }
+      })
+      .catch(() => {});
+  };
+  webContents.on('dom-ready', () => inject());
+  webContents.on('did-finish-load', () => inject());
+}
+
 if (isMainProcess && process.platform === 'linux' && electron && electron.app) {
+  const { usingWayland } = require('./wayland');
   electron.app.on('web-contents-created', (event, webContents) => {
     wrapStartDrag(webContents);
+    if (usingWayland) installHtmlDrag(webContents);
   });
 }
 

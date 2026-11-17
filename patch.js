@@ -11,7 +11,8 @@
  *  - patches/native-modules.js     : Module._load/dlopen interception & native proxies
  *  - patches/file-clipboard.js     : Linux text/uri-list replacement for win-clipboard
  *  - patches/window-manager.js     : BrowserWindow wrapper, window controls, app lifecycle
- *  - patches/drag-out.js           : webContents.startDrag() path/icon normalisation
+ *  - patches/wayland.js            : Wayland detection & static cursor themes (cursor crash)
+ *  - patches/drag-out.js           : startDrag() normalisation; HTML5 drag-out on Wayland
  *  - patches/autostart.js          : Shared XDG autostart .desktop helpers
  *  - patches/renderer-fixes.js     : Renderer-only window.ig & body display fixes
  *  - patches/ai-search.js          : AI Search plugin Linux compatibility
