@@ -199,6 +199,19 @@ environment.systemPackages = [
 | **Multi-Distro Packaging**      | ✅ Included | AppImage, RPM, Arch Linux PKGBUILD, Flatpak, and Nix Flakes                |
 | **GPU AI Search**               | ✅ Included | PyTorch & FAISS bindings with CUDA / ROCm / CPU backend support            |
 | **macOS (Darwin) Support**      | ✅ Included | Unified Nix derivation supporting `aarch64-darwin` and `x86_64-darwin`     |
+| **Copy / Paste Files**          | ✅ Included | Ctrl+C puts items on the clipboard as `text/uri-list`; files copied in a file manager paste into Eagle |
+| **Native Wayland**              | ✅ Included | `--ozone-platform-hint=auto` in every launcher; pass `--ozone-platform=x11` to force XWayland |
+| **Drag Items Out**              | ⚠️ Partial | See below                                                                  |
+
+### Dragging items out of Eagle
+
+Electron 22, which Eagle's compiled code is tied to, limits where items can be dragged:
+
+- **Wayland session:** dragging into Dolphin, Nautilus, PureRef and other native Wayland apps works (always as a copy, never a move).
+- **Wine apps (Clip Studio Paint, Paint Tool SAI, ...)** do not accept drops from Eagle in either mode: Chromium 108 never sends the `text/uri-list` file list they need. Drag the file from a file manager instead.
+- **XWayland (`--ozone-platform=x11`) on Plasma:** drops onto Wayland apps are refused; KWin does not bridge Electron 22's X11 drags.
+
+Running natively on Wayland also needs two workarounds for Chromium 108 cursor bugs, applied automatically at startup: single-frame copies of your cursor theme (in `~/.cache/eagle-linux/static-cursors`) and keeping replaced cursor themes in memory. Without them Eagle segfaults in `WaylandCursor::SetPlatformShapeInternal()`, especially with animated cursor themes or monitors at different scales.
 
 ---
 
