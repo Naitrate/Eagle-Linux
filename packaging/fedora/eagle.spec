@@ -6,7 +6,7 @@
 %global __brp_strip_static_archive %{nil}
 
 Name:           eagle
-Version:        4.0.6
+Version:        4.1.0
 Release:        1%{?dist}
 Summary:        Digital asset manager for designers (Linux Port)
 
@@ -253,6 +253,16 @@ EOF
 /lib/udev/rules.d/99-eagle-dmi.rules
 
 %changelog
+* Tue Nov 17 2026 Naitrate <git@naitrate.net> - 4.1.0-1
+- Run natively on Wayland sessions (--ozone-platform-hint=auto); pass
+  --ozone-platform=x11 to keep XWayland
+- Work around Chromium 108 Wayland cursor use-after-free crashes: static
+  copies of the cursor theme, and reloaded themes are kept alive
+- Copy items to the system clipboard as text/uri-list, and paste files
+  copied in a file manager (issue #2)
+- Drag items out to file managers on Wayland as an HTML5 drag; copy only
+- Name the system tray entry
+
 * Thu Sep 03 2026 Naitrate <git@naitrate.net> - 4.0.6-1
 - Declare exiv2 as a runtime dependency. The Exif Metadata plugin ships
   Windows and macOS builds only and picks the macOS one on Linux, where it

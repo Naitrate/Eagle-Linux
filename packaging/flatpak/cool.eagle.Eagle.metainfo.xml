@@ -86,6 +86,24 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="4.1.0" date="2026-11-17">
+      <description>
+        <p>
+          Runs natively on Wayland, and copying and dragging files out of
+          Eagle now work.
+        </p>
+        <ul>
+          <li>Ctrl+C on items puts the files on the system clipboard, and
+          files copied in a file manager paste into Eagle.</li>
+          <li>Items can be dragged out to file managers and native Wayland
+          apps such as Dolphin, Nautilus and PureRef, always as a copy.
+          Wine applications do not accept these drops yet.</li>
+          <li>Eagle runs as a native Wayland client on Wayland sessions,
+          with workarounds for Electron cursor bugs that crashed it there.</li>
+          <li>The system tray entry is now named.</li>
+        </ul>
+      </description>
+    </release>
     <release version="4.0.6" date="2026-09-03">
       <description>
         <p>
